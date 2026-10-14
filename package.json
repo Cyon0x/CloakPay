@@ -1,0 +1,52 @@
+{
+  "name": "cloakpay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CloakPay - privacy-first payments on Kinetiq Elysium",
+  "scripts": {
+    "dev": "next dev -p 3200",
+    "build": "next build",
+    "start": "next start -p 3200",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:status": "node scripts/migrate.mjs --status",
+    "chain:compile": "node scripts/chain.mjs compile",
+    "chain:deploy": "node scripts/chain.mjs deploy",
+    "chain:check": "node scripts/chain.mjs check",
+    "zk:build": "node scripts/zk/build.mjs",
+    "test:contracts": "cd contracts && forge test -vv",
+    "test:zk": "tsx --test tests/zk/*.test.mjs",
+    "test:unit": "tsx --test tests/unit/*.test.mjs",
+    "zk:prove-fixtures": "tsx scripts/zk/prove.mjs fixtures",
+    "test": "npm run test:unit && npm run test:contracts"
+  },
+  "dependencies": {
+    "arctic": "^3.7.0",
+    "clsx": "^2.1.1",
+    "jose": "^6.1.0",
+    "next": "^15.5.4",
+    "poseidon-lite": "^0.3.0",
+    "postgres": "^3.4.7",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "snarkjs": "^0.7.5",
+    "viem": "^2.38.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^24.7.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "circom2": "^0.2.23",
+    "circomlib": "^2.0.5",
+    "poseidon-solidity": "^0.0.5",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

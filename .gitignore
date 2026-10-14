@@ -1,0 +1,32 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.env
+.env.local
+.env*.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# Rust / Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# Circuit build artifacts (large; regenerated via `npm run zk:build`)
+circuits/build/
+circuits/ptau/
+
+# NOTE: public/zk is intentionally committed. It holds the proving key,
+# witness generator and manifest that the client needs; none of it is secret.
+
+# Wallet / key material — never commit
+keys/
+*.pem
+
+# TS/Foundry scratch
+contracts/cache/
+contracts/out/

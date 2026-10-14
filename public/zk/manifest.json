@@ -1,0 +1,34 @@
+{
+  "circuit": "withdraw",
+  "depth": 20,
+  "publicSignals": [
+    "root",
+    "nullifierHash",
+    "recipient",
+    "relayer",
+    "fee"
+  ],
+  "ptauPower": 14,
+  "ptauProvenance": "local-development-only",
+  "artifacts": {
+    "wasm": {
+      "file": "withdraw.wasm",
+      "bytes": 2030544,
+      "sha256": "1a9c9a5884a643a51ffbb450fb9afef866de3ca4d0bbefc9c83569237e0a1eb0"
+    },
+    "zkey": {
+      "file": "withdraw.zkey",
+      "bytes": 5346890,
+      "sha256": "9766c132523b84890e54242c6863b811597c55b0e74ad9e9bc5dc1c3495b6217"
+    },
+    "verifier": {
+      "file": "contracts/src/Groth16Verifier.sol",
+      "sha256": "33bf7524af2acde6222649c58e7d7db759cc62db02e5e607ab442060a20405f6"
+    },
+    "verificationKey": {
+      "file": "circuits/build/withdraw_verification_key.json",
+      "sha256": "18968bbec37c116d3471d57c0c830f27ca06453177c5922454478e5078358cfc"
+    }
+  },
+  "generatedAt": "2026-10-14T17:58:56.915Z"
+}
