@@ -30,3 +30,5 @@ keys/
 # TS/Foundry scratch
 contracts/cache/
 contracts/out/
+.vercel
+.env*
