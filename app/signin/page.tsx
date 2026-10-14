@@ -83,7 +83,14 @@ export default async function SignInPage({
 
           {!available.google || !available.x ? (
             <div style={{ marginTop: 18 }}>
-              <Notice tone="warn" title="One provider is not configured yet">
+              <Notice
+                tone="warn"
+                title={
+                  !available.google && !available.x
+                    ? "Sign-in is not configured yet"
+                    : "One provider is not configured yet"
+                }
+              >
                 {!available.google && !available.x
                   ? "Neither provider has credentials configured on this deployment. Set GOOGLE_CLIENT_ID/SECRET and X_CLIENT_ID/SECRET."
                   : !available.google
