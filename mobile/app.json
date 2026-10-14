@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "CloakPay",
+    "slug": "cloakpay",
+    "version": "0.1.0",
+    "scheme": "cloakpay",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#faf9f7",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#faf9f7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "xyz.cloakpay.app",
+      "associatedDomains": [
+        "applinks:cloakpay.xyz"
+      ]
+    },
+    "android": {
+      "package": "xyz.cloakpay.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#faf9f7"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "cloakpay.xyz",
+              "pathPrefix": "/pay"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-camera"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3200",
+      "chainId": 99801,
+      "explorerUrl": "https://elysium.kinetiq.xyz/testnet-explorer",
+      "appUrl": "http://localhost:3200"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

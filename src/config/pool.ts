@@ -1,4 +1,5 @@
 import type { ContractAddress } from "./chain";
+import recordedDeployments from "./pool-deployments.json";
 
 /**
  * Shielded pool configuration.
@@ -47,10 +48,24 @@ export interface PoolDeployment {
   circuit: string;
 }
 
-const deployments: Record<string, PoolDeployment | undefined> = {
-  // Populated at deploy time. Empty entries mean "not deployed yet".
-};
+/**
+ * Written by `npm run chain:deploy` after a broadcast succeeds, and by nothing
+ * else. An empty object means the pool is not deployed anywhere, which is what
+ * the UI reports.
+ */
+const deployments = recordedDeployments as Record<string, PoolDeployment | undefined>;
 
 export function getPoolDeployment(chainId: number): PoolDeployment | undefined {
   return deployments[String(chainId)];
+}
+
+/**
+ * Whether a shielded pool is actually reachable on the given chain.
+ *
+ * The whole product gates on this. Private payment flows, private payment
+ * links, and the "Private" privacy label are only offered when it is true, so
+ * an undeployed pool can never be papered over with a public transfer.
+ */
+export function poolIsDeployed(chainId: number): boolean {
+  return Boolean(getPoolDeployment(chainId));
 }

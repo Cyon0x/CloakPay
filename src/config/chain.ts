@@ -43,13 +43,25 @@ export interface ChainConfig {
   bn254Precompiles: boolean;
 }
 
+/**
+ * Read once at module load. `NEXT_PUBLIC_*` is checked first so the value is
+ * present in the browser bundle as well as on the server.
+ */
+const elysiumChainId = Number(
+  process.env.NEXT_PUBLIC_ELYSIUM_CHAIN_ID ?? process.env.ELYSIUM_CHAIN_ID ?? 99801,
+);
+
 const ELYSIUM_TESTNET: ChainConfig = {
   key: "elysium-testnet",
   name: "Elysium Testnet",
-  chainId: 99801,
-  hexChainId: "0x18699",
-  rpcUrl: process.env.ELYSIUM_RPC_URL ?? "https://testnet-rpc.elysium.kinetiq.xyz",
-  explorerUrl: "https://elysium.kinetiq.xyz/testnet-explorer",
+  chainId: elysiumChainId,
+  hexChainId: `0x${elysiumChainId.toString(16)}`,
+  rpcUrl:
+    process.env.NEXT_PUBLIC_ELYSIUM_RPC_URL ??
+    process.env.ELYSIUM_RPC_URL ??
+    "https://testnet-rpc.elysium.kinetiq.xyz",
+  explorerUrl:
+    process.env.NEXT_PUBLIC_EXPLORER_URL ?? "https://elysium.kinetiq.xyz/testnet-explorer",
   faucetUrl: "https://elysium.kinetiq.xyz/testnet-faucet",
   nativeToken: { symbol: "HYPE", name: "Hyperliquid", decimals: 18 },
   contracts: {

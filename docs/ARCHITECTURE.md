@@ -1,0 +1,130 @@
+# Architecture
+
+## Shape of the system
+
+```
+                    ┌──────────────────────────┐
+   browser / app ──▶│  Next.js App Router      │
+                    │  pages + API routes      │
+                    └───────────┬──────────────┘
+                                │
+              ┌─────────────────┼──────────────────┐
+              ▼                 ▼                  ▼
+        ┌──────────┐     ┌────────────┐    ┌───────────────┐
+        │  Neon    │     │  Elysium   │    │  Google / X   │
+        │ Postgres │     │  RPC       │    │  OAuth        │
+        └──────────┘     └────────────┘    └───────────────┘
+```
+
+There is no separate backend service. Every privileged operation is an API route
+in the same deployment, which keeps the trust boundary in one reviewable place
+instead of distributed across a client and a server that can disagree.
+
+## Layers
+
+**`src/config/`** is the only place chain constants exist. `chain.ts` holds the
+chain id, RPC URL, explorer URL, faucet URL and verified token addresses;
+`pool.ts` holds denominations, tree depth and the recorded deployment record.
+Nothing else in the codebase hardcodes any of them. The client reaches the same
+values through `NEXT_PUBLIC_*` fallbacks, so the browser and the server can never
+drift onto different networks.
+
+**`src/protocol/`** is pure cryptography with no database or network access, so
+it runs identically in the browser, in the Expo app, in Node tests and in the
+build scripts. See [PRIVACY_PROTOCOL.md](PRIVACY_PROTOCOL.md).
+
+**`src/lib/`** is server-only: the pooled Postgres client, session handling,
+OAuth, usernames, rate limiting, payment rules. `src/lib/client/` is the
+browser side: the viem chain client, native transfers, wallet unlock.
+
+**`app/api/`** holds the API routes. Each one validates its body with a schema,
+resolves the caller with `requireUser()`, checks same-origin on writes, and
+returns one of two response shapes (`{ok:true,data}` or `{ok:false,error}`).
+
+## Authentication
+
+Sign-in is an authorization-code flow with PKCE (S256), implemented in
+`src/lib/auth/oauth.ts` rather than pulled from a dependency, because Google and
+X differ in exactly one way that matters: X authenticates its token exchange with
+HTTP Basic, Google puts the secret in the body.
+
+- `state` is generated per attempt, stored server-side in `oauth_states`, single
+  use, and expires after ten minutes. The `code_verifier` never leaves the
+  server.
+- Identity is keyed on the provider's **stable account id** (`sub` for Google,
+  `data.id` for X), never on a handle or an email address, both of which can be
+  reassigned.
+- Provider access tokens are used for exactly one userinfo request and are never
+  persisted. If a token is ever needed later, the retention policy has to be
+  written down first.
+- A session is an opaque 32-byte random token in an httpOnly cookie. Only its
+  SHA-256 hash is stored, so a database dump is not a set of live logins.
+
+Account linking is deliberately manual. Two identities are only joined when a
+signed-in user connects the second provider from Settings; similar-looking
+usernames or emails are never merged automatically.
+
+## Wallets
+
+CloakPay is **self-custodial**. A twelve-word BIP-39 mnemonic is generated in
+the browser with `viem`'s standard wordlist and an account is derived at
+`m/44'/60'/0'/0/0`, so the wallet restores in any other EVM tool.
+
+The mnemonic never leaves the device in the clear. The browser seals
+`{mnemonic, viewingKeyPair}` under a user-chosen passphrase with
+PBKDF2-SHA256 (600,000 iterations) and AES-256-GCM, and posts only the
+ciphertext envelope. The server stores an opaque blob it has no way to open.
+
+The mnemonic is never derived from an email, a handle, a provider id or a PIN,
+and no plaintext key material is ever written to Postgres, an API response, a
+log, or a URL.
+
+## Payments
+
+Two settlement paths exist and they are labelled differently everywhere,
+including in the database, because they have different privacy properties.
+
+**Direct transfer (`privacy = 'public'`)** is a normal native HYPE transfer,
+signed in the browser by the user's own key and broadcast straight to the
+Elysium RPC. The server never holds a key and never signs. It only records the
+attempt and then confirms it against a real receipt. Sender, recipient, amount
+and timing are all visible on chain, and the UI says so before the user confirms.
+
+**Shielded settlement (`privacy = 'private'`)** deposits into the pool, carries
+a commitment, and pays out through a Groth16 proof. The contract verifies the
+proof and enforces the nullifier itself. This path is refused with a named error
+while the pool has no recorded deployment, so it can never silently degrade into
+the public path.
+
+The server is never the authority on whether a proof is valid. It has no verifier
+and trusts no client claim about one.
+
+### Settlement order
+
+1. `POST /api/payments/intent` validates the recipient or link, records a pending
+   payment row, and returns the payout address to the authenticated payer.
+2. The browser signs and broadcasts.
+3. `PATCH /api/payments/:id` marks it submitted with the hash.
+4. Only an actual receipt marks it confirmed. A broadcast that never confirms
+   stays `submitted`, which is what it really is.
+
+## Privacy labels
+
+`src/components/ui.tsx` maps a state to a badge. `private` is only ever applied
+to a shielded settlement. A direct transfer is always shown as `Public`. The
+labels come from the payment record, not from the screen.
+
+## What the server can see
+
+Being explicit about this matters more than the diagram:
+
+- Usernames, display names, avatars, connected provider account ids.
+- Wallet **addresses**. The server cannot spend from one.
+- Payment metadata: who paid whom, the denomination, the status, the note the
+  payer typed, and any transaction hash.
+- Ciphertext envelopes for wallets and notes. Not their contents.
+
+The server cannot read a note, cannot derive a private key, and cannot spend.
+It can see the payment graph of public payments in full, and the graph of
+private payments only as rows it stored itself. That is a real trust
+assumption for a hosted service and it is documented rather than hidden.

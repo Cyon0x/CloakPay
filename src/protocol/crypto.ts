@@ -20,7 +20,7 @@ const NOTE_ENVELOPE_AAD = new TextEncoder().encode("cloakpay/note-envelope/v1");
 
 export const PBKDF2_ITERATIONS = 600_000;
 
-export function randomBytes(length: number): Uint8Array {
+export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(length);
   globalThis.crypto.getRandomValues(out);
   return out;
@@ -32,7 +32,7 @@ export function b64urlEncode(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export function b64urlDecode(value: string): Uint8Array {
+export function b64urlDecode(value: string): Uint8Array<ArrayBuffer> {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   const out = new Uint8Array(binary.length);
@@ -159,7 +159,7 @@ export async function decryptNoteFromSender(
 
 async function deriveKek(
   passphrase: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number,
 ): Promise<CryptoKey> {
   const base = await subtle.importKey(

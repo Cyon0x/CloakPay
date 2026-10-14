@@ -4,9 +4,9 @@
   "private": true,
   "description": "CloakPay - privacy-first payments on Kinetiq Elysium",
   "scripts": {
-    "dev": "next dev -p 3200",
+    "dev": "next dev -H 127.0.0.1 -p 3200",
     "build": "next build",
-    "start": "next start -p 3200",
+    "start": "next start -H 127.0.0.1 -p 3200",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
@@ -16,9 +16,9 @@
     "chain:check": "node scripts/chain.mjs check",
     "zk:build": "node scripts/zk/build.mjs",
     "test:contracts": "cd contracts && forge test -vv",
-    "test:zk": "tsx --test tests/zk/*.test.mjs",
-    "test:unit": "tsx --test tests/unit/*.test.mjs",
-    "zk:prove-fixtures": "tsx scripts/zk/prove.mjs fixtures",
+    "test:zk": "node --import tsx --test --test-isolation=none tests/zk/*.test.mjs",
+    "test:unit": "node --import tsx --test --test-isolation=none tests/unit/*.test.mjs",
+    "zk:prove-fixtures": "node --import tsx scripts/zk/prove.mjs fixtures",
     "test": "npm run test:unit && npm run test:contracts"
   },
   "dependencies": {

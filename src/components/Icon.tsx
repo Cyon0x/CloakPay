@@ -1,0 +1,88 @@
+import type { SVGProps } from "react";
+
+/**
+ * CloakPay icon set.
+ *
+ * One library, one grid (24px), one stroke weight, so every screen reads the
+ * same. Drawn in-house rather than pulled from a package: the shapes are few
+ * enough to keep in one reviewable file, and it removes a runtime dependency.
+ */
+/** A true circle. Two arcs with matching sweep flags, not a collapsed lens. */
+function circle(cx: number, cy: number, r: number): string {
+  return `M${cx - r} ${cy}a${r} ${r} 0 1 1 ${2 * r} 0a${r} ${r} 0 1 1 ${-2 * r} 0`;
+}
+
+const PATHS: Record<string, string[]> = {
+  home: ["M3.5 10.6 12 3.6l8.5 7", "M6 9.4V20h12V9.4"],
+  send: ["M7 17 17 7", "M9 7h8v8"],
+  receive: ["M17 7 7 17", "M15 17H7V9"],
+  link: [
+    "M10.4 13.6a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1 1",
+    "M13.6 10.4a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1-1",
+  ],
+  activity: ["M3.5 12h3.8l2.4-6 3.9 12L16 12h4.5"],
+  settings: ["M4.6 8.4h8.2", "M17.3 8.4h2.1", "M4.6 15.6h2.4", "M12.1 15.6h7.3", "M15.4 6.4v4", "M9.9 13.6v4"],
+  user: ["M12 12.2a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2", "M4.8 20c.6-3.4 3.5-5.4 7.2-5.4s6.6 2 7.2 5.4"],
+  search: [circle(10.6, 10.6, 6.6), "M15.4 15.4 20.5 20.5"],
+  copy: ["M9 9h9.5v11H9z", "M15.2 6.2V4H5.5v11h2.2"],
+  check: ["m4.8 12.6 4.6 4.6 9.8-10.4"],
+  share: ["M12 15.5V3.6", "m8.2 7.4 3.8-3.8 3.8 3.8", "M5 14v6.4h14V14"],
+  qr: [
+    "M4 4h6v6H4z",
+    "M14 4h6v6h-6z",
+    "M4 14h6v6H4z",
+    "M14 14h2.5v2.5H14z",
+    "M19.5 14v2.5H17",
+    "M14 19.5h2.5",
+    "M19.5 19.5h0.01",
+  ],
+  wallet: [
+    "M3.8 8.2A2.2 2.2 0 0 1 6 6h11.2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2.2 2.2 0 0 1-2.2-2.2z",
+    "M15.4 12.5h2.6",
+  ],
+  shield: ["M12 3.4 5.4 6v5.6c0 4.2 2.8 7.3 6.6 9 3.8-1.7 6.6-4.8 6.6-9V6z"],
+  clock: [circle(12, 12, 8.2), "M12 7.4V12l3.1 2"],
+  alert: ["M12 4.6 3.4 19.4h17.2z", "M12 10v4.2", "M12 17h0.01"],
+  external: ["M13.5 4.6H19.4V10.5", "M19.4 4.6 11 13", "M18 14.4v4.6H5V6h4.6"],
+  plus: ["M12 5.4v13.2", "M5.4 12h13.2"],
+  close: ["M6.4 6.4 17.6 17.6", "M17.6 6.4 6.4 17.6"],
+  lock: ["M6.6 10.6h10.8v9H6.6z", "M9 10.6V7.8a3 3 0 0 1 6 0v2.8"],
+  bell: ["M18 16.2H6l1.2-2.1V11a4.8 4.8 0 0 1 9.6 0v3.1z", "M10.2 19.2h3.6"],
+  logout: ["M14 7.4V5H5v14h9v-2.4", "M10.4 12h9.2", "m16.6 9 3 3-3 3"],
+  gift: ["M4 10.6h16V20H4z", "M4 10.6 6.4 4.8h4.2L12 10.6", "M12 10.6l1.4-5.8h4.2L20 10.6", "M12 10.6V20"],
+  sliders: ["M5 8h9", "M17.6 8H19", "M5 16h3", "M11.6 16H19", "M15.8 6.2v3.6", "M9.8 14.2v3.6"],
+  refresh: ["M19 12a7 7 0 1 1-2.4-5.3", "M19.4 4.4v4.2h-4.2"],
+  arrowRight: ["M5 12h13.4", "m13.4 6.6 5.4 5.4-5.4 5.4"],
+  arrowLeft: ["M19 12H5.6", "m10.6 6.6L5.2 12l5.4 5.4"],
+};
+
+export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
+  name: keyof typeof PATHS | string;
+  size?: number;
+  strokeWidth?: number;
+}
+
+export function Icon({ name, size = 18, strokeWidth = 1.6, ...rest }: IconProps) {
+  const paths = PATHS[name] ?? [];
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      {...rest}
+    >
+      {paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+export type IconName = keyof typeof PATHS;
