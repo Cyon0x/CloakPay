@@ -19,7 +19,8 @@
     "test:zk": "node --import tsx --test --test-isolation=none tests/zk/*.test.mjs",
     "test:unit": "node --import tsx --test --test-isolation=none tests/unit/*.test.mjs",
     "zk:prove-fixtures": "node --import tsx scripts/zk/prove.mjs fixtures",
-    "test": "npm run test:unit && npm run test:contracts"
+    "test": "npm run test:unit && npm run test:contracts",
+    "auth:check": "node scripts/auth-check.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",
