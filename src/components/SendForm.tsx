@@ -59,6 +59,7 @@ export function SendForm({
   const [sent, setSent] = useState<{ label: string; address: string | null } | null>(null);
 
   const settlement = useSettlement();
+  const isPrivateMode = mode === "private";
 
   const denominationWei = useMemo(
     () => denominations.map((item) => BigInt(item.wei)),
@@ -118,6 +119,16 @@ export function SendForm({
 
   useEffect(() => {
     if (!walletAddress) return;
+    // A private payment is not a value transfer, so a native-transfer estimate
+    // would be meaningless: it would price a 21000-gas send while the real cost
+    // is the gas to verify a Groth16 proof. It is left unpriced rather than
+    // priced wrongly, and the fee the network actually charges is shown on the
+    // receipt.
+    if (isPrivateMode) {
+      setFee(null);
+      setFeeError(false);
+      return;
+    }
     const to =
       mode === "external" && destination.ok ? destination.address : (walletAddress as `0x${string}`);
     let cancelled = false;
@@ -130,11 +141,14 @@ export function SendForm({
     return () => {
       cancelled = true;
     };
-  }, [walletAddress, mode, destination, estimateWei, settlement.state.phase]);
+  }, [walletAddress, mode, isPrivateMode, destination, estimateWei, settlement.state.phase]);
 
   const amountWei = amountCheck.ok ? amountCheck.wei : 0n;
   const total = fee ? amountWei + fee.feeWei : null;
-  const shortfall = balance !== null && total !== null ? total - balance : null;
+  // Only a public transfer comes out of the liquid balance. A private payment
+  // spends a note that is already in the pool, so the wallet balance is not the
+  // budget for it and must not be used to block the send.
+  const shortfall = !isPrivateMode && balance !== null && total !== null ? total - balance : null;
 
   const busy =
     settlement.state.phase === "preparing" ||
@@ -201,6 +215,7 @@ export function SendForm({
             blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
             toLabel={sent?.label ?? "recipient"}
             toAddress={sent?.address ?? null}
+            privacy={intent.privacy}
           />
           <div className="row" style={{ gap: 8, marginTop: 18 }}>
             <button
@@ -265,13 +280,13 @@ export function SendForm({
               onChange={setAmount}
               symbol={symbol}
               decimals={decimals}
-              balanceWei={balance}
+              balanceWei={isPrivateMode ? null : balance}
               allowedWei={allowedWei}
               presets={presets}
               label={`Amount in ${symbol}`}
               hint={
                 mode === "private"
-                  ? "The pool settles in the fixed sizes above so that no amount identifies a payment."
+                  ? "The pool settles in the fixed sizes above so that no amount identifies a payment. Spending a size needs a shielded note of that size — check the Privacy page."
                   : balance === null
                     ? "Type any amount. Your balance is still being read from the network."
                     : `You have ${formatWei(balance)} ${symbol}. The network fee is charged on top.`
@@ -320,22 +335,33 @@ export function SendForm({
               </dd>
               <dt>Settlement</dt>
               <dd>{mode === "private" ? "Private — CloakPay users" : "Direct Transfer — External wallets"}</dd>
-              <dt>Network fee</dt>
-              <dd className="mono">
-                {fee ? `~${formatWei(fee.feeWei, 18, 8)} ${symbol}` : feeError ? "unavailable" : "estimating…"}
-              </dd>
-              <dt>Wallet balance</dt>
-              <dd className="mono">
-                {balanceError ? (
-                  <button type="button" className="link tiny" onClick={() => void refreshBalance()}>
-                    Unavailable — retry
-                  </button>
-                ) : balance === null ? (
-                  "reading…"
-                ) : (
-                  `${formatWei(balance)} ${symbol}`
-                )}
-              </dd>
+              {isPrivateMode ? (
+                <>
+                  <dt>Paid from</dt>
+                  <dd>A shielded note of this size</dd>
+                  <dt>Network fee</dt>
+                  <dd className="mono">charged in {symbol} when you sign</dd>
+                </>
+              ) : (
+                <>
+                  <dt>Network fee</dt>
+                  <dd className="mono">
+                    {fee ? `~${formatWei(fee.feeWei, 18, 8)} ${symbol}` : feeError ? "unavailable" : "estimating…"}
+                  </dd>
+                  <dt>Wallet balance</dt>
+                  <dd className="mono">
+                    {balanceError ? (
+                      <button type="button" className="link tiny" onClick={() => void refreshBalance()}>
+                        Unavailable — retry
+                      </button>
+                    ) : balance === null ? (
+                      "reading…"
+                    ) : (
+                      `${formatWei(balance)} ${symbol}`
+                    )}
+                  </dd>
+                </>
+              )}
             </dl>
 
             {shortfall !== null && shortfall > 0n ? (
@@ -371,12 +397,14 @@ export function SendForm({
                   </span>
                 </label>
                 <p className="tiny muted">
-                  {sent?.address
-                    ? `Confirming a public transfer of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol} to ${sent.address}.`
-                    : `Confirming a payment of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol}.`}
+                  {settlement.state.intent.privacy === "private"
+                    ? `A proof will be generated in this browser for ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol} to ${sent?.label ?? "the recipient"}. The pool publishes a nullifier and a new commitment, never an address. If you hold no spendable note of that size, nothing is signed.`
+                    : sent?.address
+                      ? `Confirming a public transfer of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol} to ${sent.address}.`
+                      : `Confirming a payment of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol}.`}
                 </p>
                 <button className="btn btn-primary btn-block" onClick={() => settlement.confirm(passphrase)}>
-                  Sign and send
+                  {settlement.state.intent.privacy === "private" ? "Prove and send" : "Sign and send"}
                 </button>
                 <button className="btn btn-ghost btn-sm btn-block" onClick={settlement.reset}>
                   Cancel

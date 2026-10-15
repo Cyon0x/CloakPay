@@ -3,13 +3,25 @@
 import { useCallback, useState } from "react";
 import { unlockWallet } from "@/lib/client/wallet";
 import { awaitReceipt, broadcastNativeTransfer, describeTransferError } from "@/lib/client/transfer";
+import { ShieldedError, payUsername, spendableNotes } from "@/lib/client/shielded";
+import { fieldToHex } from "@/protocol/field";
+import { denominationById } from "@/config/pool";
 import type { Hex } from "viem";
 
 export interface SettlementIntent {
   paymentId: string;
-  to: `0x${string}`;
+  privacy: "private" | "public";
+  /**
+   * The recipient's wallet address — public transfers only.
+   *
+   * A private payment is addressed by username and settles through the pool, so
+   * this is null for it and the payer never learns an address.
+   */
+  to: `0x${string}` | null;
+  /** The recipient's CloakPay username — private payments only. */
+  recipientUsername: string | null;
   amountWei: string;
-  denominationId: string;
+  denominationId: string | null;
   asset: string;
 }
 
@@ -34,13 +46,26 @@ async function patchPayment(
   return response.ok;
 }
 
+/** The message a user should see when the private path cannot even start. */
+function privateRequirement(denominationId: string | null): string {
+  const denomination = denominationId ? denominationById(denominationId) : undefined;
+  const size = denomination ? denomination.label : "that amount";
+  return `You have no spendable ${size} note. Deposit one into the shielded pool on the Privacy page first.`;
+}
+
 /**
- * Drives one public settlement end to end.
+ * Drives one settlement end to end, along whichever of the two paths it is.
  *
- * The order matters: the server records the attempt and returns the payout
- * address, the browser signs and broadcasts, and only a real receipt moves the
- * record to confirmed. A broadcast that never confirms stays submitted, which
- * is what it actually is.
+ * The two paths share a shape and nothing else:
+ *
+ *   * a *public* transfer records the attempt, the browser signs and
+ *     broadcasts a native transfer, and only a real receipt marks it confirmed;
+ *   * a *private* payment unlocks the wallet locally, spends a shielded note
+ *     with a Groth16 proof, and the pool's receipt is what marks it confirmed.
+ *
+ * The one thing this hook will never do is settle a payment announced as
+ * private by any other means. There is no fallback: if the private path cannot
+ * run, it fails and says so.
  */
 export function useSettlement() {
   const [state, setState] = useState<SettlementState>({ phase: "idle" });
@@ -67,16 +92,82 @@ export function useSettlement() {
     }
   }, []);
 
-  const confirm = useCallback(
-    async (passphrase?: string) => {
-      if (state.phase !== "ready") return;
-      const intent = state.intent;
+  /** Spends a shielded note and pays a username. No address is involved. */
+  const confirmPrivate = useCallback(
+    async (intent: SettlementIntent, passphrase?: string): Promise<void> => {
+      const username = intent.recipientUsername;
+      if (!username) {
+        setState({
+          phase: "failed",
+          message: "That payment has no CloakPay username to pay.",
+          intent,
+        });
+        return;
+      }
+
+      let txHash: Hex;
+      let nullifierHash: string;
+      let blockNumber: bigint;
+      try {
+        // Unlocking happens here rather than in `prepare`, so nothing is
+        // decrypted until the user has actually asked to pay.
+        const secret = await unlockWallet(passphrase);
+
+        // The spendable set is derived from the pool's own events and the
+        // chain's nullifier set, not from a cached balance. If a note is listed
+        // here it is because the contract would accept it.
+        const notes = await spendableNotes(secret);
+        const note = notes.find((item) => item.note.denominationId === intent.denominationId);
+        if (!note) {
+          setState({ phase: "failed", message: privateRequirement(intent.denominationId), intent });
+          return;
+        }
+
+        const result = await payUsername(secret, { note, recipientUsername: username });
+        txHash = result.txHash;
+        nullifierHash = fieldToHex(result.spentNullifier);
+        blockNumber = result.blockNumber;
+      } catch (error) {
+        setState({
+          phase: "failed",
+          message:
+            error instanceof ShieldedError
+              ? error.message
+              : describeTransferError(error),
+          intent,
+        });
+        return;
+      }
+
+      // The transfer is already mined: `payUsername` waits for the receipt and
+      // throws on a revert, so reaching this point means the pool accepted it.
+      setState({ phase: "submitted", intent, txHash });
+      await patchPayment(intent.paymentId, { status: "submitted", txHash, nullifierHash });
+      await patchPayment(intent.paymentId, { status: "confirmed", txHash });
+      setState({ phase: "confirmed", intent, txHash, blockNumber });
+    },
+    [],
+  );
+
+  /** Signs and broadcasts a native transfer to an external address. */
+  const confirmPublic = useCallback(
+    async (intent: SettlementIntent, passphrase?: string): Promise<void> => {
+      if (!intent.to) {
+        setState({
+          phase: "failed",
+          message: "That payment has no destination address.",
+          intent,
+        });
+        return;
+      }
+      const to = intent.to;
+
       setState({ phase: "signing" });
       try {
         const secret = await unlockWallet(passphrase);
         const txHash = await broadcastNativeTransfer({
           mnemonic: secret.mnemonic,
-          to: intent.to,
+          to,
           amountWei: BigInt(intent.amountWei),
         });
         setState({ phase: "submitted", intent, txHash });
@@ -108,7 +199,21 @@ export function useSettlement() {
         });
       }
     },
-    [state],
+    [],
+  );
+
+  const confirm = useCallback(
+    async (passphrase?: string) => {
+      if (state.phase !== "ready") return;
+      const intent = state.intent;
+      setState({ phase: "signing" });
+      if (intent.privacy === "private") {
+        await confirmPrivate(intent, passphrase);
+        return;
+      }
+      await confirmPublic(intent, passphrase);
+    },
+    [state, confirmPrivate, confirmPublic],
   );
 
   const reset = useCallback(() => setState({ phase: "idle" }), []);

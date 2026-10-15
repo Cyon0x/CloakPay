@@ -189,17 +189,39 @@ async function deploy() {
   const verifierSend = sendFor("Groth16Verifier");
   const poolSend = sendFor("ShieldedPool");
   const poseidonSend = sendFor("PoseidonT3");
+  const transferVerifierSend = sendFor("Groth16VerifierTransfer");
+
+  // `PoseidonT3.hash` is public, so the library is linked rather than inlined
+  // and forge deploys it through its automatic library linking. A linked
+  // library is not a `new` in the script, so it never appears in
+  // `transactions`: its address lives in `libraries`, keyed `source:name`.
+  // Reading only `transactions` would record the pool as self-contained when it
+  // in fact reverts on every tree insert without its library.
+  const linkedLibraries = new Map(
+    (broadcast.libraries ?? []).map((entry) => {
+      const [source, name, address] = String(entry).split(":");
+      return [name, { source, address }];
+    }),
+  );
 
   if (!verifierSend?.hash || !poolSend?.hash) {
     console.error("\nThe broadcast artifact carries no transaction hashes. Nothing was recorded.");
     process.exit(1);
   }
-  for (const entry of [verifierSend, poolSend, poseidonSend].filter(Boolean)) {
+  for (const entry of [verifierSend, poolSend, poseidonSend, transferVerifierSend].filter(Boolean)) {
     const status = receipts.get(entry.hash);
     if (status !== "0x1") {
       console.error(`\nDeployment transaction ${entry.hash} did not succeed (status ${status}). Nothing was recorded.`);
       process.exit(1);
     }
+  }
+
+  // The client scans the pool's logs from here, so the block is part of the
+  // deployment record rather than something a client has to rediscover.
+  const poolReceipt = (broadcast.receipts ?? []).find((r) => r.transactionHash === poolSend.hash);
+  if (poolReceipt?.blockNumber === undefined) {
+    console.error("\nThe broadcast artifact carries no block number for the pool. Nothing was recorded.");
+    process.exit(1);
   }
 
   const verifyingKeyFile = path.join(root, "circuits", "build", "withdraw_verification_key.json");
@@ -211,16 +233,18 @@ async function deploy() {
     chainId,
     pool,
     verifier,
+    transferVerifier: transferVerifierSend?.contractAddress ?? null,
     // The Poseidon library is linked into the pool, so it belongs in the record
     // with the rest: without it the pool cannot be reproduced.
-    poseidonT3: poseidonSend?.contractAddress ?? null,
+    poseidonT3: poseidonSend?.contractAddress ?? linkedLibraries.get("PoseidonT3")?.address ?? null,
     deployedAt: new Date().toISOString(),
+    deployBlock: Number(BigInt(poolReceipt.blockNumber)),
     txHash: poolSend.hash,
     verifierTxHash: verifierSend.hash,
     verifyingKeyHash,
-    denominationId: "hype-0.1,hype-1,hype-10",
+    denominationId: "hype-0.01,hype-0.1,hype-1",
     circuit: "withdraw-20",
-    transactions: [verifierSend, poolSend, poseidonSend]
+    transactions: [verifierSend, transferVerifierSend, poolSend, poseidonSend]
       .filter(Boolean)
       .map((entry) => ({
         contract: entry.contractName,

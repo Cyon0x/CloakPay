@@ -35,7 +35,12 @@ build scripts. See [PRIVACY_PROTOCOL.md](PRIVACY_PROTOCOL.md).
 
 **`src/lib/`** is server-only: the pooled Postgres client, session handling,
 OAuth, usernames, rate limiting, payment rules. `src/lib/client/` is the
-browser side: the viem chain client, native transfers, wallet unlock.
+browser side: the viem chain client, native transfers, wallet unlock, and
+`shielded.ts` -- the shielded client that seals notes, rebuilds the commitment
+tree from the pool's own events, builds witnesses and generates Groth16 proofs.
+Nothing in that module trusts a database row: spendability comes from the
+pool's events and the chain's nullifier set, and a payment is settled when the
+receipt says so.
 
 **`app/api/`** holds the API routes. Each one validates its body with a schema,
 resolves the caller with `requireUser()`, checks same-origin on writes, and

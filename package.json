@@ -25,7 +25,8 @@
     "privacy:check": "node scripts/privacy-routing-check.mjs",
     "nav:check": "node scripts/nav-drawer-check.mjs",
     "chain:verify": "node scripts/chain-verify.mjs",
-    "chain:fork-test": "node scripts/chain-fork-test.mjs"
+    "chain:fork-test": "node scripts/chain-fork-test.mjs",
+    "e2e:shielded": "node --import tsx scripts/shielded-e2e.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

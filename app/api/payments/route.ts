@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 const envelopeSchema = z.object({
   v: z.literal(1),
   alg: z.literal("P256-HKDF-SHA256-AES-256-GCM"),
-  epk: z.string().min(16),
-  iv: z.string().min(16),
-  ct: z.string().min(16),
+  epk: z.string().min(16).max(128),
+  iv: z.string().min(12).max(32),
+  ct: z.string().min(32).max(2048),
 });
 
 const bodySchema = z.object({
@@ -23,7 +23,11 @@ const bodySchema = z.object({
   denominationId: z.string(),
   privacy: z.enum(["private", "public"]),
   note: z.string().max(140).optional(),
-  commitment: z.string().max(80).optional(),
+  /** A field element, so it is bounded and hex rather than free text. */
+  commitment: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{1,64}$/)
+    .optional(),
   nullifierHash: z.string().max(80).optional(),
   txHash: z.string().max(80).optional(),
   noteEnvelope: envelopeSchema.optional(),
@@ -77,13 +81,15 @@ export async function POST(request: Request) {
     const denomination = denominationById(body.denominationId);
     if (!denomination) return fail(400, "unknown_denomination", "Unsupported amount.");
 
-    // A private payment must carry the commitment it deposited and the sealed
-    // note for the recipient: without both, nothing is claimable.
-    if (body.privacy === "private" && (!body.commitment || !body.noteEnvelope)) {
+    // A private payment must carry the commitment it deposited, the sealed note
+    // for the recipient, and the transaction that settled it. Without all
+    // three there is nothing claimable, and recording it as settled would be a
+    // claim about the chain that the chain has not made.
+    if (body.privacy === "private" && (!body.commitment || !body.noteEnvelope || !body.txHash)) {
       return fail(
         400,
         "private_payment_incomplete",
-        "A private payment needs its commitment and the sealed note for the recipient.",
+        "A private payment needs its commitment, the sealed note for the recipient, and the transaction hash that settled it.",
       );
     }
     if (body.privacy === "private" && !privatePaymentsAvailable(activeChain.chainId)) {
@@ -108,10 +114,18 @@ export async function POST(request: Request) {
     if (body.linkCode) {
       const consumed = await consumeLinkUse(body.linkCode, user.userId, {
         privatePaymentsAllowed: privatePaymentsAvailable(activeChain.chainId),
+        requestedPrivacy: body.privacy,
       });
       if (!consumed.ok) {
         if (consumed.reason === "privacy_unavailable") {
           return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
+        }
+        if (consumed.reason === "mode_mismatch") {
+          return fail(
+            409,
+            "link_mode_mismatch",
+            "This link was created for a different kind of payment, so it cannot be settled this way.",
+          );
         }
         return fail(409, "link_not_claimable", `This link cannot be used right now: ${consumed.reason}.`);
       }

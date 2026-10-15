@@ -91,6 +91,7 @@ export function CheckoutPanel({
             status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
             blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
             toLabel={`@${link.recipientUsername}`}
+            privacy={intent.privacy}
           />
           <div className="row" style={{ gap: 8, marginTop: 18 }}>
             <Link href="/activity" className="btn btn-secondary btn-sm">
@@ -237,7 +238,11 @@ export function CheckoutPanel({
                   settlement.prepare({
                     linkCode: link.code,
                     denominationId: link.denominationId ?? "",
-                    privacy: "public",
+                    // The link's owner chose how they want to be paid, and the
+                    // server refuses a mismatch. Sending anything other than
+                    // the link's own mode would just be a request to break the
+                    // promise the link makes.
+                    privacy: link.mode === "private" ? "private" : "public",
                   })
                 }
               >

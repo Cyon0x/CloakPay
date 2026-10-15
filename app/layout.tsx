@@ -3,9 +3,10 @@ import "./globals.css";
 
 /**
  * Copy shown to search engines and link previews says the same thing the page
- * does. The shielded pool is deployed to Elysium testnet and verified there,
- * but the deposit and withdrawal flow a user would drive is not built, so
- * nothing here may present a private payment as something the live app offers.
+ * does. The shielded pool is deployed to Elysium testnet, verified there, and
+ * the deposit, transfer and withdrawal flow runs against it, so a private
+ * payment can be described as something the app offers -- on testnet, and with
+ * no audit behind it, which the description also has to say.
  */
 export const metadata: Metadata = {
   title: {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s · CloakPay",
   },
   description:
-    "Pay someone by username instead of a wallet address, on Elysium. Shielded payments are deployed on testnet and under development.",
+    "Pay someone by username instead of a wallet address, on Elysium. Private payments settle through a shielded pool on testnet. Unaudited.",
   applicationName: "CloakPay",
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3200"),
   openGraph: {

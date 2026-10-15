@@ -34,6 +34,7 @@ if (entries.length === 0) {
 
 const POOL_ABI = parseAbi([
   "function verifier() view returns (address)",
+  "function transferVerifier() view returns (address)",
   "function owner() view returns (address)",
   "function levels() view returns (uint32)",
   "function paused() view returns (bool)",
@@ -41,7 +42,10 @@ const POOL_ABI = parseAbi([
   "function pooledBalance(uint256) view returns (uint256)",
 ]);
 
-const expectedDenoms = [100000000000000000n, 1000000000000000000n, 10000000000000000000n];
+// Must match `denominations()` in contracts/script/Deploy.s.sol and
+// `DENOMINATIONS` in src/config/pool.ts. Read back from the chain below rather
+// than trusted, so a drift between the three is a failed check, not a surprise.
+const expectedDenoms = [10000000000000000n, 100000000000000000n, 1000000000000000000n];
 const expectedDepth = 20;
 
 for (const [chainId, record] of entries) {
@@ -58,6 +62,7 @@ for (const [chainId, record] of entries) {
   for (const [label, address] of [
     ["pool", record.pool],
     ["verifier", record.verifier],
+    ["transferVerifier", record.transferVerifier],
     ["poseidonT3", record.poseidonT3],
   ]) {
     if (!address) continue;
@@ -66,14 +71,24 @@ for (const [chainId, record] of entries) {
   }
 
   const pool = record.pool;
-  const [verifier, owner, levels, paused] = await Promise.all([
+  const [verifier, transferVerifier, owner, levels, paused] = await Promise.all([
     client.readContract({ address: pool, abi: POOL_ABI, functionName: "verifier" }),
+    client.readContract({ address: pool, abi: POOL_ABI, functionName: "transferVerifier" }),
     client.readContract({ address: pool, abi: POOL_ABI, functionName: "owner" }),
     client.readContract({ address: pool, abi: POOL_ABI, functionName: "levels" }),
     client.readContract({ address: pool, abi: POOL_ABI, functionName: "paused" }),
   ]);
 
   check("the pool points at the recorded verifier", verifier.toLowerCase() === record.verifier.toLowerCase(), verifier);
+  // The transfer verifier is what makes a shielded payment verifiable at all.
+  // A pool whose second verifier is not the recorded one cannot settle a
+  // private payment, however healthy everything else looks.
+  check(
+    "the pool points at the recorded transfer verifier",
+    Boolean(record.transferVerifier) &&
+      transferVerifier.toLowerCase() === String(record.transferVerifier).toLowerCase(),
+    transferVerifier,
+  );
   check("the tree depth matches the client's expectation", Number(levels) === expectedDepth, `levels=${levels}`);
   check("the pool is not paused", paused === false, `paused=${paused}`);
   check("the owner is the deploying account", owner.toLowerCase() === "0xe20796322664d23e06EC9DAd0B86AAd475b78310".toLowerCase(), owner);

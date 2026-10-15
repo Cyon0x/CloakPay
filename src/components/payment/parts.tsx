@@ -270,7 +270,12 @@ export function SettlementPicker({
   );
 }
 
-/** Confirmation of a settled public transfer. Every value shown is from the chain. */
+/**
+ * Confirmation of a settled payment. Every value shown is read back from the
+ * chain, and the two settlement paths are described differently because they
+ * are different: a public transfer moves funds to an address, a private
+ * payment spends a note.
+ */
 export function Receipt({
   amountLabel,
   symbol,
@@ -280,6 +285,7 @@ export function Receipt({
   blockNumber,
   toLabel,
   toAddress,
+  privacy = "public",
 }: {
   amountLabel: string;
   symbol?: string;
@@ -289,7 +295,9 @@ export function Receipt({
   blockNumber?: bigint | null;
   toLabel: string;
   toAddress?: string | null;
+  privacy?: "private" | "public";
 }) {
+  const isPrivate = privacy === "private";
   return (
     <div className="receipt">
       <div className="row-between">
@@ -302,9 +310,11 @@ export function Receipt({
         {amountLabel} {symbol ?? "HYPE"}
       </p>
       <dl className="kv" style={{ marginTop: 14 }}>
-        <dt>Sent to</dt>
+        <dt>{isPrivate ? "Paid" : "Sent to"}</dt>
         <dd className="mono">{toLabel}</dd>
-        {toAddress ? (
+        {/* A private payment deliberately has no address to show: the pool
+            published a nullifier and a commitment instead. */}
+        {toAddress && !isPrivate ? (
           <>
             <dt>Address</dt>
             <dd className="mono" style={{ wordBreak: "break-all" }}>
@@ -313,7 +323,7 @@ export function Receipt({
           </>
         ) : null}
         <dt>Settlement</dt>
-        <dd>Direct transfer</dd>
+        <dd>{isPrivate ? "Private — shielded pool" : "Direct transfer"}</dd>
         {blockNumber !== undefined && blockNumber !== null ? (
           <>
             <dt>Block</dt>
@@ -331,7 +341,9 @@ export function Receipt({
         </a>
       </div>
       <p className="tiny muted" style={{ marginTop: 12 }}>
-        This transfer is public. The sender, recipient, amount and timing are all visible on chain.
+        {isPrivate
+          ? "The chain recorded a spent nullifier and a new commitment, not an address or a recipient. The note was sealed to the recipient's viewing key, so only they can open it."
+          : "This transfer is public. The sender, recipient, amount and timing are all visible on chain."}
       </p>
     </div>
   );

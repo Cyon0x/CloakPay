@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 import {IWithdrawVerifier} from "./interfaces/IWithdrawVerifier.sol";
+import {ITransferVerifier} from "./interfaces/ITransferVerifier.sol";
 
 /// @title ShieldedPool
 /// @notice A fixed-denomination shielded pool for the chain's native token.
@@ -13,6 +14,11 @@ import {IWithdrawVerifier} from "./interfaces/IWithdrawVerifier.sol";
 /// Withdrawal is private: a Groth16 proof shows that the withdrawer knows the
 /// secrets behind some commitment already in the tree, without revealing which
 /// one. The deposit and the withdrawal cannot be linked by an observer.
+///
+/// A shielded transfer spends one note and mints another of the same
+/// denomination, so the money never leaves the pool and no address is involved
+/// on either side. That is what lets a payment be addressed to a CloakPay
+/// username without the recipient's wallet address reaching the chain.
 ///
 /// What this contract deliberately does NOT do:
 ///   * it never stores an amount alongside a commitment, so no per-note value
@@ -30,6 +36,9 @@ contract ShieldedPool is ReentrancyGuard {
 
     /// @notice Verifier generated from `circuits/withdraw.circom`.
     IWithdrawVerifier public immutable verifier;
+
+    /// @notice Verifier generated from `circuits/transfer.circom`.
+    ITransferVerifier public immutable transferVerifier;
 
     /// @notice Tree height. Fixed at 20 -> 1,048,576 commitments per denomination.
     uint32 public immutable levels;
@@ -69,6 +78,14 @@ contract ShieldedPool is ReentrancyGuard {
         address relayer,
         uint256 fee
     );
+    /// @notice A note was spent and another minted. No address is published.
+    event PrivateTransfer(
+        uint256 indexed denominationIndex,
+        uint256 nullifierHash,
+        uint256 newCommitment,
+        uint32 leafIndex,
+        address submitter
+    );
     event Paused(address account);
     event Unpaused(address account);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -84,6 +101,7 @@ contract ShieldedPool is ReentrancyGuard {
     error TransferFailed();
     error NotOwner();
     error ZeroAddress();
+    error InvalidCommitment();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -96,14 +114,25 @@ contract ShieldedPool is ReentrancyGuard {
     }
 
     /// @param verifier_     Verifier contract for the withdraw circuit.
+    /// @param transferVerifier_ Verifier contract for the transfer circuit.
     /// @param denominations_ Fixed denominations in wei, ascending, non-zero.
     /// @param levels_       Tree height. Must match the compiled circuit.
-    constructor(IWithdrawVerifier verifier_, uint256[] memory denominations_, uint32 levels_) {
+    constructor(
+        IWithdrawVerifier verifier_,
+        ITransferVerifier transferVerifier_,
+        uint256[] memory denominations_,
+        uint32 levels_
+    ) {
         require(address(verifier_) != address(0), "ShieldedPool: verifier is the zero address");
+        require(
+            address(transferVerifier_) != address(0),
+            "ShieldedPool: transfer verifier is the zero address"
+        );
         require(denominations_.length > 0, "ShieldedPool: no denominations");
         require(levels_ > 0 && levels_ <= 32, "ShieldedPool: unsupported tree height");
 
         verifier = verifier_;
+        transferVerifier = transferVerifier_;
         levels = levels_;
         owner = msg.sender;
 
@@ -189,6 +218,59 @@ contract ShieldedPool is ReentrancyGuard {
         _sendValue(recipient, payout);
 
         emit Withdrawal(denominationIndex, nullifierHash, recipient, relayer, fee);
+    }
+
+    /* ── Shielded transfer ────────────────────────────────────────────────── */
+
+    /// @notice Spends one note and mints another of the same denomination.
+    /// @dev The money does not move: `pooledBalance` is untouched, because one
+    ///      note of a denomination is exchanged for one note of the same
+    ///      denomination. Conservation is structural rather than an arithmetic
+    ///      check, which is the point of a fixed-denomination pool.
+    ///
+    ///      There is no `recipient`, `relayer` or `fee` parameter. The proof
+    ///      binds `newCommitment`, so whoever submits this cannot substitute a
+    ///      commitment they control; and because the payout is a commitment
+    ///      rather than an address, any third party may submit it -- which is
+    ///      what lets a relayer pay the gas without being able to redirect the
+    ///      note. The sender's address is not part of the transaction unless
+    ///      the sender is the one who submits it.
+    ///
+    /// @param proof            Groth16 proof for `circuits/transfer.circom`.
+    /// @param denominationIndex Which denomination's tree to operate on.
+    /// @param root             A root that denomination's tree has produced.
+    /// @param nullifierHash    Nullifier of the note being spent.
+    /// @param newCommitment    Commitment of the note being created.
+    /// @return leafIndex       Position of the new commitment in the tree.
+    function privateTransfer(
+        Proof calldata proof,
+        uint256 denominationIndex,
+        uint256 root,
+        uint256 nullifierHash,
+        uint256 newCommitment
+    ) external nonReentrant whenNotPaused returns (uint32 leafIndex) {
+        if (denominationIndex >= denominations.length) revert UnknownDenomination();
+        // Cheap explicit guard; the circuit also constrains this, so a proof
+        // that reached here with a zero commitment could not exist.
+        if (newCommitment == 0) revert InvalidCommitment();
+
+        // The root must belong to this denomination's tree, so a note can only
+        // be spent at the value it was deposited at.
+        if (!trees[denominationIndex].isKnownRoot(root)) revert UnknownRoot();
+        if (nullifierSpent[nullifierHash]) revert NoteAlreadySpent();
+
+        uint256[3] memory publicSignals = [root, nullifierHash, newCommitment];
+
+        if (!transferVerifier.verifyProof(proof.pA, proof.pB, proof.pC, publicSignals)) {
+            revert InvalidProof();
+        }
+
+        // Effects before interactions. The nullifier set is shared with
+        // `withdraw`, so a note cannot be spent once here and once there.
+        nullifierSpent[nullifierHash] = true;
+        leafIndex = trees[denominationIndex].insert(newCommitment, levels, zeros);
+
+        emit PrivateTransfer(denominationIndex, nullifierHash, newCommitment, leafIndex, msg.sender);
     }
 
     /* ── Views ────────────────────────────────────────────────────────────── */

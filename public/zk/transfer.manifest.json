@@ -1,0 +1,33 @@
+{
+  "circuit": "transfer",
+  "depth": 20,
+  "verifierContract": "Groth16VerifierTransfer",
+  "publicSignals": [
+    "root",
+    "nullifierHash",
+    "newCommitment"
+  ],
+  "ptauPower": 14,
+  "ptauProvenance": "reused",
+  "artifacts": {
+    "wasm": {
+      "file": "transfer.wasm",
+      "bytes": 2028773,
+      "sha256": "c96c25edcf2cd37be4a3961d7e37383e8c57934dcc189e47d9f76530bef64c3f"
+    },
+    "zkey": {
+      "file": "transfer.zkey",
+      "bytes": 5273346,
+      "sha256": "33d6639a3e8f87ebd45624a88f078587e036bded38c136217af23afa84330f23"
+    },
+    "verifier": {
+      "file": "contracts/src/Groth16VerifierTransfer.sol",
+      "sha256": "0ee74e4c5f9de43f93f908074e760a71554be46f7b97eb11ce8265a5bd835674"
+    },
+    "verificationKey": {
+      "file": "circuits/build/transfer_verification_key.json",
+      "sha256": "1e36378a7d9194ac19e2ec9455cfb351b8e59b1d046bebd3ca1124270c0128be"
+    }
+  },
+  "generatedAt": "2026-10-15T21:05:56.493Z"
+}

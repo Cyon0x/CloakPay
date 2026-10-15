@@ -25,8 +25,8 @@ test("notes never repeat their secrets", () => {
 });
 
 test("amount comes from the denomination, not from user input", () => {
-  const note = createNote({ chainId: CHAIN, denominationId: "hype-10" });
-  assert.equal(note.amountWei, 10_000_000_000_000_000_000n);
+  const note = createNote({ chainId: CHAIN, denominationId: "hype-0.01" });
+  assert.equal(note.amountWei, 10_000_000_000_000_000n);
 });
 
 test("an unknown denomination is refused", () => {
@@ -42,6 +42,21 @@ test("encode / decode round-trips exactly", () => {
   assert.equal(restored.nullifierHash, note.nullifierHash);
   assert.equal(restored.denominationId, note.denominationId);
 });
+
+// The denomination ids contain a dot ("hype-0.01"), and the note format is
+// dot-separated. Splitting into a fixed five fields made every note of a
+// fractional denomination fail to decode, which silently made funded notes
+// unspendable, so each size is round-tripped explicitly.
+for (const denominationId of ["hype-0.01", "hype-0.1", "hype-1"]) {
+  test(`a note of ${denominationId} round-trips through its dotted id`, () => {
+    const note = createNote({ chainId: CHAIN, denominationId });
+    const restored = decodeNote(encodeNote(note));
+    assert.equal(restored.denominationId, denominationId);
+    assert.equal(restored.nullifier, note.nullifier);
+    assert.equal(restored.secret, note.secret);
+    assert.equal(restored.amountWei, note.amountWei);
+  });
+}
 
 test("malformed notes are rejected instead of half-parsed", () => {
   assert.throws(() => decodeNote("not-a-note"), /malformed/);

@@ -86,12 +86,20 @@ export async function POST(request: Request) {
     if (body.linkCode) {
       const consumed = await consumeLinkUse(body.linkCode, user.userId, {
         privatePaymentsAllowed: privatePaymentsAvailable(activeChain.chainId),
+        requestedPrivacy: body.privacy,
       });
       if (!consumed.ok) {
         // A private link that cannot be settled is refused before its use
         // counter moves, so the link is still there when the flow is ready.
         if (consumed.reason === "privacy_unavailable") {
           return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
+        }
+        if (consumed.reason === "mode_mismatch") {
+          return fail(
+            409,
+            "link_mode_mismatch",
+            "This link was created for a different kind of payment, so it cannot be settled this way.",
+          );
         }
         return fail(409, "link_not_claimable", `This link cannot be used right now: ${consumed.reason}.`);
       }
@@ -115,7 +123,29 @@ export async function POST(request: Request) {
       return fail(400, "missing_recipient", "Choose a recipient or a payment link.");
     }
 
-    if (!destination) {
+    // The two flows need different things from the recipient, and only one of
+    // them needs an address.
+    //
+    // A public transfer is addressed to a wallet, so the address is looked up
+    // and returned. A private payment is addressed to a username and settles
+    // through the pool, so the payer is never told the recipient's address --
+    // what a private payment needs from the recipient is their viewing key,
+    // which is exactly the thing that lets a note be sealed to them.
+    if (body.privacy === "private") {
+      const recipientWallet = await sql<{ viewing_key_id: string | null }[]>`
+        select w.viewing_key_id from wallets w where w.user_id = ${recipientId} limit 1
+      `;
+      if (!recipientWallet[0]) {
+        return fail(409, "recipient_has_no_wallet", "That account has not finished setting up a wallet yet.");
+      }
+      if (!recipientWallet[0].viewing_key_id) {
+        return fail(
+          409,
+          "recipient_cannot_receive",
+          "That account has not registered a viewing key, so it cannot receive a private payment yet.",
+        );
+      }
+    } else if (!destination) {
       const wallets = await sql<{ address: string }[]>`
         select address from wallets where user_id = ${recipientId} limit 1
       `;
@@ -124,6 +154,20 @@ export async function POST(request: Request) {
         return fail(409, "recipient_has_no_wallet", "That account has not finished setting up a wallet yet.");
       }
       destination = recipientWallet.address;
+    }
+
+    // A private payment is addressed by username and nothing else. The client
+    // needs the username to resolve the recipient's viewing key at proof time,
+    // so it is returned here rather than being re-derived from a link.
+    let recipientUsername: string | null = null;
+    if (recipientId) {
+      const recipients = await sql<{ username: string | null }[]>`
+        select username from users where id = ${recipientId} limit 1
+      `;
+      recipientUsername = recipients[0]?.username ?? null;
+    }
+    if (body.privacy === "private" && !recipientUsername) {
+      return fail(409, "recipient_has_no_username", "That account has no CloakPay username to pay.");
     }
 
     const idempotencyKey = `intent:${paymentCode(24)}`;
@@ -143,7 +187,10 @@ export async function POST(request: Request) {
       {
         paymentId: created[0].id,
         idempotencyKey,
-        to: destination,
+        privacy: body.privacy,
+        // Null for a private payment: the payer has no business knowing it.
+        to: body.privacy === "private" ? null : destination,
+        recipientUsername,
         amountWei: amountWei.toString(),
         denominationId,
         asset: "HYPE",

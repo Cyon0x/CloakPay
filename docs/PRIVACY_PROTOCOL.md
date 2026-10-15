@@ -15,8 +15,9 @@ permission, and it is not a claim that a normal transfer is private.
 | Commitment | `C = Poseidon(nullifier, secret)` | `src/protocol/note.ts` |
 | Nullifier | `N = Poseidon(nullifier)` | same |
 | Membership | depth-20 incremental Merkle tree, `node = Poseidon(left, right)` | `src/protocol/merkle.ts`, `MerkleTreeWithHistory.sol` |
-| Proof | Groth16 over BN254 | `circuits/withdraw.circom` |
-| Verification | on-chain pairing precompiles | `contracts/src/Groth16Verifier.sol` |
+| Proof (withdraw) | Groth16 over BN254, 5 public signals | `circuits/withdraw.circom` |
+| Proof (transfer) | Groth16 over BN254, 3 public signals | `circuits/transfer.circom` |
+| Verification | on-chain pairing precompiles | `contracts/src/Groth16Verifier.sol`, `Groth16VerifierTransfer.sol` |
 | Note transport | ECIES, P-256 + HKDF-SHA256 + AES-256-GCM | `src/protocol/crypto.ts` |
 | Wallet at rest | PBKDF2-SHA256 (600k) + AES-256-GCM | same |
 
@@ -34,9 +35,9 @@ Groth16 was chosen over a universal-setup system because the circuit is small,
 fixed, and its verifier is a few hundred lines of generated Solidity that runs on
 a precompile. The trade-off is stated below rather than hidden.
 
-The denominations are fixed (0.1, 1 and 10 HYPE) so that amounts are not a
+The denominations are fixed (0.01, 0.1 and 1 HYPE) so that amounts are not a
 correlating signal. Each denomination has its own tree, because a note of 1 HYPE
-genuinely cannot be confused with a note of 10 HYPE and pretending otherwise
+genuinely cannot be confused with a note of 0.1 HYPE and pretending otherwise
 would only make the proofs more expensive.
 
 ## The circuit
@@ -57,6 +58,30 @@ names the error when either fails.
 
 The prover reveals nothing else. Not the deposit index, not the amount inside the
 commitment, not which other notes exist.
+
+### The transfer circuit
+
+`circuits/transfer.circom` is what makes paying a *username* private. It spends
+one note and mints another of the same denomination, without moving any money:
+the payout is a commitment rather than a transfer to an address, so no recipient
+address ever reaches the chain.
+
+1. `Poseidon(nullifier, secret)` is a leaf of the tree with root `root`.
+2. `nullifierHash = Poseidon(nullifier)` for that same `nullifier`.
+3. `newCommitment` is a canonical field element below `2^254`, and non-zero.
+
+**Public signals, in declaration order:** `[ root, nullifierHash, newCommitment ]`
+
+There is deliberately no `recipient`, `relayer` or `fee` signal. The pool's
+backing is unchanged by a transfer -- one note out, one note in, same size -- so
+there is no fee to pay and nothing a relayer could take. And because the payout
+is a commitment and not an address, **anyone** may submit the transaction, which
+is what would let a relayer pay the gas without being able to redirect the note.
+The proof binds `newCommitment`, so a submitter cannot substitute a note of their
+own.
+
+Step 3 is the same class of guard as the withdraw circuit's step 3: without it,
+two different calldata payloads could satisfy one proof.
 
 ## Lifecycle of a note
 
@@ -85,6 +110,9 @@ therefore tells people to claim a payment rather than leaving it unspent.
 - the root is one the contract has actually produced (`UnknownRoot`);
 - the proof verifies against the deployed verifier;
 - the nullifier has not been spent (`NoteAlreadySpent`);
+- a transfer spends a note and inserts its replacement atomically, sharing one
+  nullifier set with withdrawals, so a note cannot be spent once here and once
+  there;
 - `msg.value` accounting keeps `pooledBalance` a lower bound on the contract's
   real balance;
 - `fee <= denomination`, and a fee above zero requires a relayer address
@@ -137,7 +165,9 @@ the verifying-key hash on chain so a mismatch is detectable.
   canonical by construction.
 - Notes are never placed in a URL, a log, an analytics event, or a database
   column. The export string is `cloakpay1.<chainId>.<denominationId>.<nullifier>.<secret>`
-  and the interface tells the user to treat it exactly like cash.
+  and the interface tells the user to treat it exactly like cash. The
+  denomination id may contain a dot, so a parser must anchor on the end rather
+  than split into a fixed number of fields.
 - A note delivered to a recipient is sealed to their P-256 viewing key with an
   ephemeral sender key, so two payments of the same size to the same person
   produce unrelated ciphertexts.

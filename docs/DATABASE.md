@@ -55,7 +55,13 @@ makes storing one a schema change rather than an accident.
 
 **`shielded_notes.note_envelope`** is ciphertext addressed to the owner's viewing
 key. `commitment` is unique per chain, so the same note cannot be recorded twice.
-`nullifier_hash` is only ever written after a spend.
+`nullifier_hash` is only ever written after a spend. `origin` records how the
+note arrived -- `deposit` (the owner's own funds), `payment` (settled through a
+payment link) or `transfer` (a shielded transfer from another account) -- and
+`004_note_transfer_origin.sql` widened the check constraint when the third
+became possible. A row here is a *delivery address*, not a claim that funds
+exist: spendability is derived from the pool's own events and the chain's
+nullifier set, so a row whose commitment never reached the chain is inert.
 
 **`payments`** is the record of an attempt, not a claim of settlement. `privacy`
 is `public` or `private` and is set from the actual flow, and `status` only

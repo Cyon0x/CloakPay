@@ -20,9 +20,9 @@ export interface Denomination {
 }
 
 export const DENOMINATIONS: Denomination[] = [
+  { id: "hype-0.01", label: "0.01 HYPE", wei: 10_000_000_000_000_000n },
   { id: "hype-0.1", label: "0.1 HYPE", wei: 100_000_000_000_000_000n },
   { id: "hype-1", label: "1 HYPE", wei: 1_000_000_000_000_000_000n },
-  { id: "hype-10", label: "10 HYPE", wei: 10_000_000_000_000_000_000n },
 ];
 
 export function denominationById(id: string): Denomination | undefined {
@@ -39,12 +39,20 @@ export interface PoolDeployment {
   pool: ContractAddress;
   verifier: ContractAddress;
   deployedAt: string;
+  /**
+   * Block the pool was deployed in. The client rebuilds the commitment tree
+   * from the pool's own events, and this is where it starts scanning, so it has
+   * to be recorded rather than guessed.
+   */
+  deployBlock?: number;
   /** Transaction hash of the pool deployment, for explorer verification. */
   txHash: string;
   /** Transaction hash of the verifier deployment. */
   verifierTxHash?: string;
   /** Linked Poseidon library, deployed alongside the pool. */
   poseidonT3?: string | null;
+  /** Verifier generated from `circuits/transfer.circom`. */
+  transferVerifier?: string | null;
   /** Every transaction the deployment sent, in the order it sent them. */
   transactions?: { contract: string; address: string; txHash: string }[];
   /** Hash of the verifying key used to generate the deployed verifier. */
@@ -86,8 +94,14 @@ export function poolIsDeployed(chainId: number): boolean {
  * settles as an observable transfer, which is the single worst failure this
  * product could have. So the client half is tracked separately and stays off
  * until `src/lib/client/shielded.ts` exists and is exercised end to end.
+ *
+ * It is on because that flow now runs: `scripts/shielded-e2e.mjs` deposits a
+ * real note, proves and settles a shielded transfer to a second account,
+ * decrypts the delivered note and withdraws it, on Elysium Testnet, against
+ * this deployment. Flip it back to false the moment that stops being true --
+ * an unavailable private payment is recoverable, a mislabelled one is not.
  */
-export const SHIELDED_CLIENT_READY = false;
+export const SHIELDED_CLIENT_READY = true;
 
 /**
  * The only predicate the payment flows should ask. True means a private

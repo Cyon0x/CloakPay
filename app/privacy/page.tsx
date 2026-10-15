@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TopBar } from "@/components/Nav";
+import { PrivacyPoolPanel } from "@/components/PrivacyPoolPanel";
 import { Badge, Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
@@ -36,6 +37,7 @@ export default async function PrivacyPage() {
   const deployment = getPoolDeployment(activeChain.chainId);
 
   let notes: NoteCounts | null = null;
+  let walletAddress: string | null = null;
   if (user) {
     const [row] = await db()<NoteCounts[]>`
       select
@@ -45,6 +47,11 @@ export default async function PrivacyPage() {
       from shielded_notes where user_id = ${user.userId} and chain_id = ${activeChain.chainId}
     `;
     notes = row ?? { unspent: 0, spending: 0, spent: 0 };
+
+    const [wallet] = await db()<{ address: string }[]>`
+      select address from wallets where user_id = ${user.userId}
+    `;
+    walletAddress = wallet?.address ?? null;
   }
 
   return (
@@ -109,6 +116,21 @@ export default async function PrivacyPage() {
               </div>
             </Card>
 
+            {/* The pool itself, once a deployment is recorded. The panel derives
+                every figure it shows from the pool's own events and the chain's
+                nullifier set, so nothing below is a cached number. */}
+            {deployment ? (
+              <PrivacyPoolPanel
+                denominations={DENOMINATIONS.map((denomination) => ({
+                  id: denomination.id,
+                  label: denomination.label,
+                  wei: denomination.wei.toString(),
+                }))}
+                symbol={activeChain.nativeToken.symbol}
+                walletAddress={walletAddress}
+              />
+            ) : null}
+
             <div className="grid-3">
               <Card>
                 <div style={{ padding: 20 }}>
@@ -119,7 +141,7 @@ export default async function PrivacyPage() {
                   <p className="tiny muted" style={{ marginTop: 8 }}>
                     {notes
                       ? notes.unspent > 0
-                        ? "Each one is a bearer note. Whoever can produce the proof can spend it, so claim them rather than leaving them."
+                        ? "Each one is a bearer note. Whoever can produce the proof can spend it, so claim them rather than leaving them. This count is what CloakPay has recorded; the shielded balance above is what the pool itself agrees is spendable."
                         : "No unspent notes. Nothing is waiting to be claimed."
                       : "Sign in to see the notes addressed to your viewing key."}
                   </p>

@@ -1,25 +1,32 @@
 {
   "99801": {
     "chainId": 99801,
-    "pool": "0xaad3b74043e779f648043ab79e807f16958afdb2",
-    "verifier": "0x8760c4e57bbfd9ea0440efe246e66c94621794cd",
+    "pool": "0x9dD46f576D5e1122C65206682155977569e06772",
+    "verifier": "0xEc16BA7E8b7Ea36644995B21345b73F6e2E73FC4",
+    "transferVerifier": "0xabd08ebccf841f6906c7713a475741d19098be8a",
     "poseidonT3": "0x3b0c15ea1f2f2fc9860963f867946f8cffc1215c",
-    "deployedAt": "2026-10-15T15:46:50.741Z",
-    "txHash": "0xb4e5badd9eab102cccbc5aba5fb24b904d797742ae23efa90efd55f1aaafad69",
-    "verifierTxHash": "0x79a52688326984b9d016933703f9c9aecf049325aba68d3371b9e7a0be522e56",
+    "deployedAt": "2026-10-15T21:54:52.525Z",
+    "deployBlock": 9742682,
+    "txHash": "0x38e520a079a61bcd6b39a5f853c308bae0c17c1725758f2eb5f0392bb90001d0",
+    "verifierTxHash": "0xc35414c5d3dd4a42bbdd01608e9c0d15c6f9b263f31245946c3b4b844df10317",
     "verifyingKeyHash": "18968bbec37c116d3471d57c0c830f27ca06453177c5922454478e5078358cfc",
-    "denominationId": "hype-0.1,hype-1,hype-10",
+    "denominationId": "hype-0.01,hype-0.1,hype-1",
     "circuit": "withdraw-20",
     "transactions": [
       {
         "contract": "Groth16Verifier",
-        "address": "0x8760c4e57bbfd9ea0440efe246e66c94621794cd",
-        "txHash": "0x79a52688326984b9d016933703f9c9aecf049325aba68d3371b9e7a0be522e56"
+        "address": "0xec16ba7e8b7ea36644995b21345b73f6e2e73fc4",
+        "txHash": "0xc35414c5d3dd4a42bbdd01608e9c0d15c6f9b263f31245946c3b4b844df10317"
+      },
+      {
+        "contract": "Groth16VerifierTransfer",
+        "address": "0xabd08ebccf841f6906c7713a475741d19098be8a",
+        "txHash": "0x709a3d5449b5fc2361fc892e88cf7f68f8d6182fa14ec6b220387350618df22d"
       },
       {
         "contract": "ShieldedPool",
-        "address": "0xaad3b74043e779f648043ab79e807f16958afdb2",
-        "txHash": "0xb4e5badd9eab102cccbc5aba5fb24b904d797742ae23efa90efd55f1aaafad69"
+        "address": "0x9dd46f576d5e1122c65206682155977569e06772",
+        "txHash": "0x38e520a079a61bcd6b39a5f853c308bae0c17c1725758f2eb5f0392bb90001d0"
       },
       {
         "contract": "PoseidonT3",

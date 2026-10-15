@@ -14,7 +14,14 @@
  * would need to look like.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, copyFileSync, statSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  copyFileSync,
+  statSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -29,6 +36,29 @@ const CIRCOM = path.join(root, "node_modules", ".bin", "circom2");
 const SNARKJS = path.join(root, "node_modules", ".bin", "snarkjs");
 const PTAU_POWER = Number(process.env.PTAU_POWER ?? 14);
 const CIRCUIT = process.env.CIRCUIT ?? "withdraw";
+
+/**
+ * Each circuit has its own public-signal list and its own verifier contract,
+ * because a verifier is generated for one circuit and cannot check another.
+ * Rebuilding `withdraw` would produce a different verifier and invalidate the
+ * one already deployed, so the two are kept apart by name here too.
+ */
+const CIRCUITS = {
+  withdraw: {
+    verifierContract: "Groth16Verifier",
+    publicSignals: ["root", "nullifierHash", "recipient", "relayer", "fee"],
+  },
+  transfer: {
+    verifierContract: "Groth16VerifierTransfer",
+    publicSignals: ["root", "nullifierHash", "newCommitment"],
+  },
+};
+
+const spec = CIRCUITS[CIRCUIT];
+if (!spec) {
+  console.error(`Unknown circuit "${CIRCUIT}". Known: ${Object.keys(CIRCUITS).join(", ")}`);
+  process.exit(1);
+}
 
 const PTAU_MIRRORS = [
   `https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_${PTAU_POWER}.ptau`,
@@ -126,8 +156,25 @@ run(
 
 run(SNARKJS, ["zkey", "export", "verificationkey", zkeyFinal, vkeyPath], "export verification key");
 
-const verifierOut = path.join(root, "contracts", "src", "Groth16Verifier.sol");
+const verifierOut = path.join(root, "contracts", "src", `${spec.verifierContract}.sol`);
 run(SNARKJS, ["zkey", "export", "solidityverifier", zkeyFinal, verifierOut], "export solidity verifier");
+
+// snarkjs always declares the contract as `Groth16Verifier`, because that name
+// is baked into its template. Two circuits in one Foundry project cannot both
+// be called that, so the declaration is renamed here -- deliberately before the
+// manifest hash is taken, so the hash recorded below is the hash of the file
+// that actually exists on disk rather than of a version that no longer does.
+if (spec.verifierContract !== "Groth16Verifier") {
+  const exported = readFileSync(verifierOut, "utf8");
+  const renamed = exported.replace(
+    /^contract Groth16Verifier\b/m,
+    `contract ${spec.verifierContract}`,
+  );
+  if (renamed === exported) {
+    throw new Error(`snarkjs did not export a Groth16Verifier contract into ${verifierOut}`);
+  }
+  writeFileSync(verifierOut, renamed);
+}
 
 /* 4 ── publish proving artifacts ──────────────────────────────────────────── */
 const wasmSrc = path.join(build, `${CIRCUIT}_js`, `${CIRCUIT}.wasm`);
@@ -138,22 +185,27 @@ const hashFile = (p) => createHash("sha256").update(readFileSync(p)).digest("hex
 const manifest = {
   circuit: CIRCUIT,
   depth: 20,
-  publicSignals: ["root", "nullifierHash", "recipient", "relayer", "fee"],
+  verifierContract: spec.verifierContract,
+  publicSignals: spec.publicSignals,
   ptauPower: PTAU_POWER,
   ptauProvenance,
   artifacts: {
     wasm: { file: `${CIRCUIT}.wasm`, bytes: statSync(path.join(publicZk, `${CIRCUIT}.wasm`)).size, sha256: hashFile(path.join(publicZk, `${CIRCUIT}.wasm`)) },
     zkey: { file: `${CIRCUIT}.zkey`, bytes: statSync(path.join(publicZk, `${CIRCUIT}.zkey`)).size, sha256: hashFile(path.join(publicZk, `${CIRCUIT}.zkey`)) },
-    verifier: { file: "contracts/src/Groth16Verifier.sol", sha256: hashFile(verifierOut) },
+    verifier: { file: path.relative(root, verifierOut), sha256: hashFile(verifierOut) },
     verificationKey: { file: `circuits/build/${CIRCUIT}_verification_key.json`, sha256: hashFile(vkeyPath) },
   },
   generatedAt: new Date().toISOString(),
 };
 
-const { writeFileSync } = await import("node:fs");
-writeFileSync(path.join(publicZk, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+// Each circuit gets its own manifest. `manifest.json` keeps pointing at the
+// withdraw circuit, because that is the path the documentation names.
+writeFileSync(path.join(publicZk, `${CIRCUIT}.manifest.json`), JSON.stringify(manifest, null, 2) + "\n");
+if (CIRCUIT === "withdraw") {
+  writeFileSync(path.join(publicZk, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+}
 
 console.log(`\nProving artifacts published to public/zk (trusted setup: ${ptauProvenance})`);
-console.log(`  withdraw.wasm  ${(manifest.artifacts.wasm.bytes / 1024).toFixed(0)} KB`);
-console.log(`  withdraw.zkey  ${(manifest.artifacts.zkey.bytes / 1024 / 1024).toFixed(1)} MB`);
-console.log(`  verifier       contracts/src/Groth16Verifier.sol`);
+console.log(`  ${CIRCUIT}.wasm  ${(manifest.artifacts.wasm.bytes / 1024).toFixed(0)} KB`);
+console.log(`  ${CIRCUIT}.zkey  ${(manifest.artifacts.zkey.bytes / 1024 / 1024).toFixed(1)} MB`);
+console.log(`  verifier       contracts/src/${spec.verifierContract}.sol`);

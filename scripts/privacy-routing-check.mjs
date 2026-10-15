@@ -3,7 +3,7 @@
  * Proves the private and public payment paths stay apart, against a real
  * database and a running server.
  *
- * Two things this guards, both of which were live defects:
+ * Three things this guards, all of which were live defects:
  *
  *   1. A private link settled as a public transfer. The payer's UI used to
  *      offer "Continue to payment" for a link whose owner asked for privacy,
@@ -12,6 +12,10 @@
  *   2. A refused private link burning a use. The usage counter moved before
  *      the privacy check ran, so a payer who could not pay a one-time link
  *      nevertheless claimed it and spent its single use.
+ *   3. A private link settled as a public transfer once private payments became
+ *      available. The link's mode was never compared with the requested one, so
+ *      the payer could be handed the owner's wallet address and publish the
+ *      amount -- for a link whose whole point was that this would not happen.
  *
  * The HTTP section needs a running server and creates two fixture users, which
  * it deletes again on the way out, including on failure.
@@ -20,7 +24,7 @@
  *   APP_URL=http://127.0.0.1:3210 node scripts/privacy-routing-check.mjs
  */
 import postgres from "postgres";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, webcrypto as crypto } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
 function loadEnv() {
@@ -100,8 +104,16 @@ try {
   `)[0];
   await sql`insert into wallets (user_id, address, key_envelope)
             values (${payer.id}, ${"0x2222222222222222222222222222222222222222"}, ${envelope}::jsonb)`;
-  await sql`insert into wallets (user_id, address, key_envelope)
-            values (${payee.id}, ${"0x3333333333333333333333333333333333333333"}, ${envelope}::jsonb)`;
+  // The payee needs a real viewing key: a private payment is sealed to one, and
+  // the server refuses to open a private payment for an account that has none.
+  const viewing = await crypto.subtle.exportKey(
+    "jwk",
+    (await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]))
+      .publicKey,
+  );
+  await sql`insert into wallets (user_id, address, key_envelope, viewing_public_key, viewing_key_id)
+            values (${payee.id}, ${"0x3333333333333333333333333333333333333333"}, ${envelope}::jsonb,
+                    ${sql.json(viewing)}, ${randomBytes(12).toString("base64url")})`;
 
   const link = (await sql`
     insert into payment_links (code, owner_user_id, title, amount_wei, denomination_id, mode, reusable, max_uses)
@@ -127,22 +139,26 @@ try {
     return { status: response.status, body: await response.json().catch(() => null) };
   };
 
-  // ── 1. a private payment to a username is refused, and stays refused ───────
+  // ── 1. a private payment opens, and still never reveals an address ─────────
   let r = await call("/api/payments/intent", {
     toUsername: payee.username,
     denominationId: "hype-1",
     privacy: "private",
   });
   record(
-    "a private payment is refused while the flow is unbuilt",
-    r.status === 409 && r.body?.error?.code === "privacy_unavailable",
-    `http=${r.status} ${JSON.stringify(r.body?.error)}`,
+    "a private payment to a username opens without a destination address",
+    r.status === 201 &&
+      r.body?.data?.privacy === "private" &&
+      r.body?.data?.to === null &&
+      r.body?.data?.recipientUsername === payee.username,
+    `http=${r.status} to=${JSON.stringify(r.body?.data?.to)} recipient=${r.body?.data?.recipientUsername}`,
   );
   record(
-    "the refusal hands back no destination to send a public transfer to",
+    "the opened private payment carries no wallet address anywhere in the response",
     !JSON.stringify(r.body ?? {}).includes("0x3333"),
     JSON.stringify(r.body?.data ?? null),
   );
+  remember(r);
 
   // ── 2. an address cannot be smuggled into the private flow ────────────────
   r = await call("/api/payments/intent", {
@@ -164,7 +180,7 @@ try {
   });
   record(
     "settling a private link as a public transfer is refused",
-    r.status === 409 && r.body?.error?.code === "privacy_unavailable",
+    r.status === 409 && r.body?.error?.code === "link_mode_mismatch",
     `http=${r.status} ${JSON.stringify(r.body?.error)}`,
   );
 
@@ -176,6 +192,19 @@ try {
     after.uses === 0 && after.claimed_by_user_id === null && after.status === "active",
     JSON.stringify({ uses: after.uses, claimed: after.claimed_by_user_id, status: after.status }),
   );
+
+  // ── 3b. and the same link still settles the way it asked to ───────────────
+  r = await call("/api/payments/intent", {
+    linkCode: link.code,
+    denominationId: "hype-1",
+    privacy: "private",
+  });
+  record(
+    "the private link opens when it is asked for privately, with no address",
+    r.status === 201 && r.body?.data?.to === null && r.body?.data?.privacy === "private",
+    `http=${r.status} to=${JSON.stringify(r.body?.data?.to)} ${JSON.stringify(r.body?.error ?? "")}`,
+  );
+  remember(r);
 
   // ── 4. the public path still works, and still reports its destination ─────
   r = await call("/api/payments/intent", {
@@ -191,17 +220,39 @@ try {
   remember(r);
 
   // ── 5. the settlement endpoint refuses a private record too ───────────────
+  const goodEnvelope = {
+    v: 1,
+    alg: "P256-HKDF-SHA256-AES-256-GCM",
+    epk: "a".repeat(64),
+    iv: "b".repeat(16),
+    ct: "c".repeat(64),
+  };
   r = await call("/api/payments", {
     idempotencyKey: `qa-routing-${tag}`,
     toUsername: payee.username,
     denominationId: "hype-1",
     privacy: "private",
-    commitment: "123",
-    noteEnvelope: { v: 1, alg: "P256-HKDF-SHA256-AES-256-GCM", epk: "a".repeat(20), iv: "b".repeat(20), ct: "c".repeat(20) },
+    commitment: `0x${"11".repeat(32)}`,
+    noteEnvelope: goodEnvelope,
   });
   record(
-    "recording a private payment is refused while the flow is unbuilt",
-    r.status === 409 && r.body?.error?.code === "privacy_unavailable",
+    "a private payment cannot be recorded without the transaction that settled it",
+    r.status === 400 && r.body?.error?.code === "private_payment_incomplete",
+    `http=${r.status} ${JSON.stringify(r.body?.error)}`,
+  );
+
+  r = await call("/api/payments", {
+    idempotencyKey: `qa-routing-bad-${tag}`,
+    toUsername: payee.username,
+    denominationId: "hype-1",
+    privacy: "private",
+    commitment: "not-a-field-element",
+    txHash: `0x${"ab".repeat(32)}`,
+    noteEnvelope: goodEnvelope,
+  });
+  record(
+    "a commitment that is not a field element is refused",
+    r.status === 400 && r.body?.error?.code === "invalid_body",
     `http=${r.status} ${JSON.stringify(r.body?.error)}`,
   );
 } finally {

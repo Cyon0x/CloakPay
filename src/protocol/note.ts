@@ -7,6 +7,13 @@
  *
  * Encoding used for transport and export:
  *   cloakpay1.<chainId>.<denominationId>.<nullifier>.<secret>
+ *
+ * The denomination id is everything between the chain id and the last two
+ * fields, and may itself contain a dot (`hype-0.01` does). Parsing therefore
+ * anchors on the end: the final two fields are always the nullifier and the
+ * secret, so the id can never be mistaken for them. Splitting naively into five
+ * parts instead is what made every note of a fractional denomination decode as
+ * malformed.
  * The string is never placed in a URL, never logged, and never stored in
  * plaintext anywhere.
  */
@@ -64,8 +71,13 @@ export function encodeNote(note: Note): string {
 
 export function decodeNote(encoded: string): Note {
   const parts = encoded.trim().split(".");
-  if (parts.length !== 5) throw new Error("note is malformed");
-  const [prefix, chainIdRaw, denominationId, nullifierHex, secretHex] = parts;
+  // Five fields, but the denomination id may contain dots of its own, so the
+  // id is read as everything between the chain id and the trailing pair.
+  if (parts.length < 5) throw new Error("note is malformed");
+  const [prefix, chainIdRaw] = parts;
+  const nullifierHex = parts[parts.length - 2];
+  const secretHex = parts[parts.length - 1];
+  const denominationId = parts.slice(2, parts.length - 2).join(".");
   if (prefix !== PREFIX) throw new Error(`unrecognised note prefix: ${prefix}`);
   const chainId = Number(chainIdRaw);
   if (!Number.isInteger(chainId)) throw new Error("note has an invalid chain id");

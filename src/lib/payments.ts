@@ -37,7 +37,7 @@ export interface PaymentRow {
 export async function consumeLinkUse(
   code: string,
   userId: string,
-  options: { privatePaymentsAllowed: boolean },
+  options: { privatePaymentsAllowed: boolean; requestedPrivacy: Privacy },
 ): Promise<
   | { ok: true; linkId: string; amountWei: bigint | null; denominationId: string | null; mode: string; ownerUserId: string }
   | { ok: false; reason: string }
@@ -86,6 +86,17 @@ export async function consumeLinkUse(
     }
     if (link.mode === "private" && !options.privatePaymentsAllowed) {
       return { ok: false, reason: "privacy_unavailable" };
+    }
+
+    // The link's mode is the promise its owner made about how they will be
+    // paid. Settling a link that asked for a private payment as a public
+    // transfer would hand the payer the owner's wallet address and publish the
+    // amount -- the exact opposite of the request. It is checked here, before
+    // the counter moves, so a mismatch costs the link nothing.
+    //
+    // A `record` link makes no privacy promise, so either settlement is fine.
+    if (link.mode !== "record" && link.mode !== options.requestedPrivacy) {
+      return { ok: false, reason: "mode_mismatch" };
     }
 
     await tx`

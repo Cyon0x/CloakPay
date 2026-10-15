@@ -4,8 +4,10 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {ShieldedPool} from "../src/ShieldedPool.sol";
 import {Groth16Verifier} from "../src/Groth16Verifier.sol";
+import {Groth16VerifierTransfer} from "../src/Groth16VerifierTransfer.sol";
 import {MerkleTreeWithHistory} from "../src/MerkleTreeWithHistory.sol";
 import {IWithdrawVerifier} from "../src/interfaces/IWithdrawVerifier.sol";
+import {ITransferVerifier} from "../src/interfaces/ITransferVerifier.sol";
 
 /// @notice Tests the shielded pool against real Groth16 proofs.
 ///
@@ -17,12 +19,16 @@ import {IWithdrawVerifier} from "../src/interfaces/IWithdrawVerifier.sol";
 contract ShieldedPoolTest is Test {
     ShieldedPool internal pool;
     Groth16Verifier internal verifier;
+    Groth16VerifierTransfer internal transferVerifier;
 
     uint32 internal constant DEPTH = 20;
+    uint256 internal constant D_SMALL = 0.01 ether;
     uint256 internal constant D01 = 0.1 ether;
     uint256 internal constant D1 = 1 ether;
-    uint256 internal constant D10 = 10 ether;
-    uint256 internal constant D1_INDEX = 1;
+    /// Index of `D1` in the deployed denomination set: [0.01, 0.1, 1].
+    uint256 internal constant D1_INDEX = 2;
+    /// Index of `D_SMALL`, the denomination a funded end-to-end run uses.
+    uint256 internal constant SMALL_INDEX = 0;
 
     /// Cross-language pin: the same value `src/protocol/merkle.ts` computes for
     /// an empty depth-20 tree. If either implementation drifts, this fails.
@@ -43,13 +49,19 @@ contract ShieldedPoolTest is Test {
 
     function setUp() public {
         verifier = new Groth16Verifier();
+        transferVerifier = new Groth16VerifierTransfer();
 
         uint256[] memory denoms = new uint256[](3);
-        denoms[0] = D01;
-        denoms[1] = D1;
-        denoms[2] = D10;
+        denoms[0] = D_SMALL;
+        denoms[1] = D01;
+        denoms[2] = D1;
 
-        pool = new ShieldedPool(IWithdrawVerifier(address(verifier)), denoms, DEPTH);
+        pool = new ShieldedPool(
+            IWithdrawVerifier(address(verifier)),
+            ITransferVerifier(address(transferVerifier)),
+            denoms,
+            DEPTH
+        );
         vm.deal(address(this), 1_000 ether);
         vm.deal(STRANGER, 1_000 ether);
     }
@@ -252,8 +264,10 @@ contract ShieldedPoolTest is Test {
         Fixture memory f = loadSingleLeafFixture();
         pool.deposit{value: D1}(D1_INDEX, f.commitment);
 
+        // A different denomination keeps its own tree, so a root the 1 HYPE
+        // tree produced must not be spendable against the 0.1 HYPE tree.
         vm.expectRevert(ShieldedPool.UnknownRoot.selector);
-        pool.withdraw(f.proof, 2, f.root, f.nullifierHash, payable(RECIPIENT), payable(address(0)), 0);
+        pool.withdraw(f.proof, 1, f.root, f.nullifierHash, payable(RECIPIENT), payable(address(0)), 0);
     }
 
     /* ── Deeper tree ──────────────────────────────────────────────────────── */
@@ -337,16 +351,16 @@ contract ShieldedPoolTest is Test {
     function test_pool_never_owes_more_than_it_holds() public {
         Fixture memory f = loadSingleLeafFixture();
 
-        pool.deposit{value: D01}(0, 111);
+        pool.deposit{value: D_SMALL}(SMALL_INDEX, 111);
+        pool.deposit{value: D01}(1, 222);
         pool.deposit{value: D1}(D1_INDEX, f.commitment);
-        pool.deposit{value: D10}(2, 999);
 
-        assertEq(pool.totalPooledBalance(), D01 + D1 + D10);
-        assertEq(address(pool).balance, D01 + D1 + D10);
+        assertEq(pool.totalPooledBalance(), D_SMALL + D01 + D1);
+        assertEq(address(pool).balance, D_SMALL + D01 + D1);
 
         pool.withdraw(f.proof, D1_INDEX, f.root, f.nullifierHash, payable(RECIPIENT), payable(address(0)), 0);
 
-        assertEq(pool.totalPooledBalance(), D01 + D10);
+        assertEq(pool.totalPooledBalance(), D_SMALL + D01);
         assertGe(address(pool).balance, pool.totalPooledBalance(), "pool is insolvent");
     }
 }

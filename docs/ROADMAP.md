@@ -8,11 +8,24 @@ generated into Solidity. The circuit, the TypeScript and the Solidity agree on
 hashing, tree depth, leaf ordering and root calculation, and that agreement is
 pinned by a test rather than by convention.
 
-**Contracts.** `ShieldedPool.sol` and `MerkleTreeWithHistory.sol`, with 25
+**Contracts.** `ShieldedPool.sol` and `MerkleTreeWithHistory.sol`, with 40
 Foundry tests passing. The suite includes a genuine Groth16 proof verified by the
 deployed verifier inside the EVM, plus adversarial cases: replayed nullifier,
 redirected recipient, tampered fee, swapped proof point, unknown root, oversized
-fee, owner attempting to move pool funds.
+fee, owner attempting to move pool funds, a third party relaying a transfer they
+cannot redirect, and a note that cannot be spent as both a transfer and a
+withdrawal.
+
+**Shielded payments, end to end.** `transfer.circom` mints a replacement note
+instead of paying an address, which is what lets a payment be addressed to a
+username with no wallet address on chain. The client
+(`src/lib/client/shielded.ts`) derives spendability from the pool's own events
+and the chain's nullifier set, generates real Groth16 proofs in the browser, and
+delivers the recipient's note as ciphertext the server cannot read. `/privacy`
+holds the deposit and withdrawal surface. `npm run e2e:shielded` deposits a note,
+settles a proof-verified shielded transfer to a second account, decrypts the
+delivered note and withdraws it, on Elysium Testnet, against the deployed pool —
+seventeen checks, each read back from the chain.
 
 **Chain validation.** `eth_chainId` returns `0x185d9` (99801), the client reports
 `nitro/...` (Arbitrum Orbit), and `ecAdd`, `ecMul` and `ecPairing` were each
@@ -44,16 +57,10 @@ icon and favicon from the supplied master artwork, and one design token set in
 
 ## Partial
 
-**Shielded payments.** The cryptography, the contracts and the client proving
-pipeline are complete and tested, and the verifier, the Poseidon library and the
-pool are deployed to Elysium testnet (`src/config/pool-deployments.json`) with
-`npm run chain:verify` re-reading every recorded address over RPC and
-`npm run chain:fork-test` exercising the deployed pool on a fork with real
-proofs. What is still missing is the deposit and withdrawal flow a user would
-drive from the browser, so `SHIELDED_CLIENT_READY` stays false. Everything that
-would otherwise offer a private payment is switched off and says why, and the
-API refuses with `privacy_unavailable` rather than falling back to a public
-transfer.
+**Untested in a browser.** The private-payment surface is exercised through the
+real client module, the real API and the real contracts, but not by clicking.
+The deposit panel, the Send form's private mode and the checkout panel have been
+rendered and reviewed at desktop and phone widths; no automated test drives them.
 
 **Trusted setup.** Functional, but single-party and development-only. See
 [PRIVACY_PROTOCOL.md](PRIVACY_PROTOCOL.md#trusted-setup). This must be replaced
@@ -90,7 +97,14 @@ on the settings screen controls in-app alerts only.
 - **Argon2id.** The wallet envelope uses PBKDF2, which is GPU-friendly. Argon2id
   is the right choice and is not available through WebCrypto without a
   dependency.
-- **Indexer.** `pool_events` and `pool_state` exist in the schema. Nothing
-  populates them yet, because the deposit and withdrawal flow that would emit
-  the events is not built.
+- **Indexer.** `pool_events` and `pool_state` exist in the schema and nothing
+  populates them. The client rebuilds the commitment tree by reading the pool's
+  logs directly, which is correct but means every client re-scans from the
+  deployment block. An indexer is an efficiency and a reorg-safety question, not
+  a correctness one.
+- **Note recovery.** A note is a bearer instrument and its secret lives only in
+  the owner's sealed wallet envelope. If the envelope is lost, the funds behind
+  the note are unreachable. Social recovery and a backup-note export are not
+  implemented, and the deposits made by the development runs are a live example:
+  they remain in the pool with their secrets gone.
 - **Audit.** None has taken place.
