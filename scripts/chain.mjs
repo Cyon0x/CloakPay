@@ -164,10 +164,43 @@ async function deploy() {
     process.exit(1);
   }
 
-  const transactionHash =
-    output.match(/hash:\s*(0x[0-9a-fA-F]{64})/i)?.[1] ??
-    output.match(/0x[0-9a-fA-F]{64}/)?.[0] ??
-    "";
+  // The broadcast artifact is the authority on what was actually sent. Scraping
+  // stdout for a hash is what previously recorded an empty string: the payload
+  // is not printed in a shape a regex can be trusted to find.
+  const broadcastFile = path.join(
+    contractsDir,
+    "broadcast",
+    "Deploy.s.sol",
+    String(chainId),
+    "run-latest.json",
+  );
+  if (!existsSync(broadcastFile)) {
+    console.error("\nNo broadcast artifact was written, so nothing was recorded.");
+    process.exit(1);
+  }
+  const broadcast = JSON.parse(readFileSync(broadcastFile, "utf8"));
+  const sends = broadcast.transactions ?? [];
+  const receipts = new Map(
+    (broadcast.receipts ?? []).map((receipt) => [receipt.transactionHash, receipt.status]),
+  );
+  const sendFor = (contractName) =>
+    sends.find((entry) => (entry.contractName ?? "").toLowerCase() === contractName.toLowerCase());
+
+  const verifierSend = sendFor("Groth16Verifier");
+  const poolSend = sendFor("ShieldedPool");
+  const poseidonSend = sendFor("PoseidonT3");
+
+  if (!verifierSend?.hash || !poolSend?.hash) {
+    console.error("\nThe broadcast artifact carries no transaction hashes. Nothing was recorded.");
+    process.exit(1);
+  }
+  for (const entry of [verifierSend, poolSend, poseidonSend].filter(Boolean)) {
+    const status = receipts.get(entry.hash);
+    if (status !== "0x1") {
+      console.error(`\nDeployment transaction ${entry.hash} did not succeed (status ${status}). Nothing was recorded.`);
+      process.exit(1);
+    }
+  }
 
   const verifyingKeyFile = path.join(root, "circuits", "build", "withdraw_verification_key.json");
   const verifyingKeyHash = existsSync(verifyingKeyFile)
@@ -178,11 +211,22 @@ async function deploy() {
     chainId,
     pool,
     verifier,
+    // The Poseidon library is linked into the pool, so it belongs in the record
+    // with the rest: without it the pool cannot be reproduced.
+    poseidonT3: poseidonSend?.contractAddress ?? null,
     deployedAt: new Date().toISOString(),
-    txHash: transactionHash,
+    txHash: poolSend.hash,
+    verifierTxHash: verifierSend.hash,
     verifyingKeyHash,
     denominationId: "hype-0.1,hype-1,hype-10",
     circuit: "withdraw-20",
+    transactions: [verifierSend, poolSend, poseidonSend]
+      .filter(Boolean)
+      .map((entry) => ({
+        contract: entry.contractName,
+        address: entry.contractAddress,
+        txHash: entry.hash,
+      })),
   };
 
   const deployments = JSON.parse(readFileSync(deploymentsFile, "utf8"));

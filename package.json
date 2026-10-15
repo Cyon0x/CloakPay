@@ -21,7 +21,9 @@
     "zk:prove-fixtures": "node --import tsx scripts/zk/prove.mjs fixtures",
     "test": "npm run test:unit && npm run test:contracts",
     "auth:check": "node scripts/auth-check.mjs",
-    "username:check": "node scripts/username-flow-check.mjs"
+    "username:check": "node scripts/username-flow-check.mjs",
+    "chain:verify": "node scripts/chain-verify.mjs",
+    "chain:fork-test": "node scripts/chain-fork-test.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

@@ -39,8 +39,14 @@ export interface PoolDeployment {
   pool: ContractAddress;
   verifier: ContractAddress;
   deployedAt: string;
-  /** Transaction hash of the deployment, for explorer verification. */
+  /** Transaction hash of the pool deployment, for explorer verification. */
   txHash: string;
+  /** Transaction hash of the verifier deployment. */
+  verifierTxHash?: string;
+  /** Linked Poseidon library, deployed alongside the pool. */
+  poseidonT3?: string | null;
+  /** Every transaction the deployment sent, in the order it sent them. */
+  transactions?: { contract: string; address: string; txHash: string }[];
   /** Hash of the verifying key used to generate the deployed verifier. */
   verifyingKeyHash: string;
   denominationId: string;

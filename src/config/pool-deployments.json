@@ -1,1 +1,31 @@
-{}
+{
+  "99801": {
+    "chainId": 99801,
+    "pool": "0xaad3b74043e779f648043ab79e807f16958afdb2",
+    "verifier": "0x8760c4e57bbfd9ea0440efe246e66c94621794cd",
+    "poseidonT3": "0x3b0c15ea1f2f2fc9860963f867946f8cffc1215c",
+    "deployedAt": "2026-10-15T15:46:50.741Z",
+    "txHash": "0xb4e5badd9eab102cccbc5aba5fb24b904d797742ae23efa90efd55f1aaafad69",
+    "verifierTxHash": "0x79a52688326984b9d016933703f9c9aecf049325aba68d3371b9e7a0be522e56",
+    "verifyingKeyHash": "18968bbec37c116d3471d57c0c830f27ca06453177c5922454478e5078358cfc",
+    "denominationId": "hype-0.1,hype-1,hype-10",
+    "circuit": "withdraw-20",
+    "transactions": [
+      {
+        "contract": "Groth16Verifier",
+        "address": "0x8760c4e57bbfd9ea0440efe246e66c94621794cd",
+        "txHash": "0x79a52688326984b9d016933703f9c9aecf049325aba68d3371b9e7a0be522e56"
+      },
+      {
+        "contract": "ShieldedPool",
+        "address": "0xaad3b74043e779f648043ab79e807f16958afdb2",
+        "txHash": "0xb4e5badd9eab102cccbc5aba5fb24b904d797742ae23efa90efd55f1aaafad69"
+      },
+      {
+        "contract": "PoseidonT3",
+        "address": "0x3b0c15ea1f2f2fc9860963f867946f8cffc1215c",
+        "txHash": "0x140307143837b9ab7fc81cda879f260545b455dc30812773c1309f91479f2aa6"
+      }
+    ]
+  }
+}
