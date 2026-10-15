@@ -35,6 +35,7 @@ export default async function OnboardingPage() {
             <OnboardingWizard
               initialUsername={user.username ?? ""}
               initialDisplayName={user.displayName ?? ""}
+              initialStage={user.username ? "wallet" : "username"}
               chainId={activeChain.chainId}
             />
           </div>

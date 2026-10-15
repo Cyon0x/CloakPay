@@ -15,14 +15,20 @@ type Stage = "username" | "wallet" | "passphrase" | "recovery" | "done";
 export function OnboardingWizard({
   initialUsername,
   initialDisplayName,
+  initialStage = "username",
 }: {
   initialUsername: string;
   initialDisplayName: string;
+  /**
+   * Where the wizard opens. Someone who already claimed a username resumes at
+   * the wallet; asking them to claim one again is a loop, not progress.
+   */
+  initialStage?: Stage;
   /** Kept for completeness so the wizard cannot drift from the active network. */
   chainId?: number;
 }) {
   const router = useRouter();
-  const [stage, setStage] = useState<Stage>("username");
+  const [stage, setStage] = useState<Stage>(initialStage);
   const [username, setUsername] = useState(initialUsername);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [passphrase, setPassphrase] = useState("");
@@ -36,17 +42,37 @@ export function OnboardingWizard({
     setBusy(true);
     setError(null);
     try {
-      const check = await fetch(`/api/username/check?u=${encodeURIComponent(username)}`).then((r) => r.json());
+      // A failure to answer the question is not a "no" answer. Only a genuine
+      // `available: false` means the name is unavailable; anything else says so
+      // in its own words, because sending someone to try a different username
+      // when the database is down just wastes their time.
+      let check: { ok?: boolean; data?: { available?: boolean; reason?: string | null } };
+      try {
+        check = await fetch(`/api/username/check?u=${encodeURIComponent(username)}`).then((r) => r.json());
+      } catch {
+        setError("Couldn't check username availability. Please try again.");
+        return;
+      }
+      if (!check.ok) {
+        setError("Couldn't check username availability. Please try again.");
+        return;
+      }
       if (!check.data?.available) {
         setError(check.data?.reason ?? "That username is not available.");
         return;
       }
-      const response = await fetch("/api/onboarding", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ step: "wallet", username, displayName }),
-      });
-      const body = await response.json();
+
+      let body: { ok?: boolean; error?: { message?: string } };
+      try {
+        body = await fetch("/api/onboarding", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ step: "wallet", username, displayName }),
+        }).then((r) => r.json());
+      } catch {
+        setError("Couldn't save your username. Check your connection and try again.");
+        return;
+      }
       if (!body.ok) {
         setError(body.error?.message ?? "That did not work.");
         return;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { assertSameOrigin, fail, handle, ok } from "@/lib/api";
-import { db } from "@/lib/db";
+import { SQLSTATE, db, sqlStateOf } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { isUsernameTaken, validateUsername } from "@/lib/username";
 
@@ -29,17 +29,28 @@ export async function POST(request: Request) {
         return fail(409, "username_taken", "That username is taken.");
       }
       try {
+        // `username_lower` is `generated always as (lower(username)) stored`, so
+        // it must not appear here: naming it makes Postgres reject the whole
+        // statement with 428C9 and no row is written. It maintains itself.
         await db()`
           update users
           set username = ${normalised},
-              username_lower = ${normalised},
               display_name = coalesce(${displayName ?? null}, display_name),
               updated_at = now()
           where id = ${user.userId}
         `;
-      } catch {
-        // The unique index is the real guard; this catches a lost race.
-        return fail(409, "username_taken", "That username is taken.");
+      } catch (error) {
+        // Only these two outcomes are the caller's to see. The unique index is
+        // the real guard and this catches a lost race between the check above
+        // and the write; everything else is our failure, not a taken name.
+        const state = sqlStateOf(error);
+        if (state === SQLSTATE.uniqueViolation) {
+          return fail(409, "username_taken", "That username is taken.");
+        }
+        if (state === SQLSTATE.checkViolation) {
+          return fail(400, "invalid_username", "That username is not allowed.");
+        }
+        throw error;
       }
     }
 

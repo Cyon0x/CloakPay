@@ -87,11 +87,21 @@ export default async function LandingPage() {
                 CloakPay makes sending and receiving payments simpler. Sign in with Google or X, claim a
                 username, and send money by typing it.
               </p>
+              {/* Both actions open the one sign-in route. A first-time
+                  identity is created by the OAuth callback, so "Create account"
+                  is the same door with a different welcome — there is no second
+                  authentication path to keep in step. */}
               <div className="hero-actions">
                 <Link href="/signin" className="btn btn-primary btn-lg">
-                  Create an account
+                  Sign in
+                  <Icon name="arrowRight" size={16} strokeWidth={2} />
                 </Link>
-                <Link href="/how-it-works" className="btn btn-secondary btn-lg">
+                <Link href="/signin" className="btn btn-secondary btn-lg">
+                  Create account
+                </Link>
+              </div>
+              <div className="hero-actions-secondary">
+                <Link href="/how-it-works" className="btn btn-ghost">
                   How the privacy works
                 </Link>
               </div>

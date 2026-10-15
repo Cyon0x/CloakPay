@@ -21,3 +21,23 @@ export function db(): postgres.Sql {
 }
 
 export type Sql = postgres.Sql;
+
+/**
+ * The SQLSTATE codes a route is allowed to branch on, named so a bare "23505"
+ * never turns up in a catch block without a reader knowing what it means.
+ */
+export const SQLSTATE = {
+  uniqueViolation: "23505",
+  checkViolation: "23514",
+} as const;
+
+/**
+ * postgres.js hangs the SQLSTATE on the thrown error. Anything without one did
+ * not come from the server, and treating it as a constraint failure is how an
+ * outage gets dressed up as a validation message.
+ */
+export function sqlStateOf(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}

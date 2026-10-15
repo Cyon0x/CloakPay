@@ -536,7 +536,25 @@
     max-width: 52ch;
     margin-top: 16px;
   }
-  .hero-actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+  .hero-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  /* The privacy link is deliberately a rank below the two above it: it answers
+     a question, it does not take you anywhere you have to go. */
+  .hero-actions-secondary { margin-top: 12px; }
+  /* A hairline so it reads as a control rather than a stray line of body text.
+     The softest border and no surface keep it a rank below the pair above it —
+     `.btn-ghost` itself stays chromeless, since the app uses it elsewhere. */
+  .hero-actions-secondary .btn { border-color: var(--color-line-soft); }
+  .hero-actions-secondary .btn:hover:not(:disabled) {
+    border-color: var(--color-line);
+    background: var(--color-paper-0);
+  }
+  @media (max-width: 440px) {
+    /* Two 48px buttons side by side on a small phone are cramped slivers, so
+       they stack full width — which also gives each one a comfortable target. */
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .hero-actions .btn { width: 100%; }
+    .hero-actions-secondary .btn { width: 100%; }
+  }
 
   .eyebrow {
     font-size: var(--text-2xs);
