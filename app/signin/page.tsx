@@ -107,7 +107,7 @@ export default async function SignInPage({
               terms
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="link">
+            <Link href="/privacy/policy" className="link">
               privacy policy
             </Link>
             .

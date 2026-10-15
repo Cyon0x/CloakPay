@@ -74,6 +74,18 @@ const PATHS: Record<string, string[]> = {
      and the shape into a hook. */
   moon: ["M8.12 3.88A9 9 0 1 0 18.71 18A9.4 9.4 0 0 1 8.12 3.88Z"],
   menu: ["M4 7.5h16", "M4 12h16", "M4 16.5h16"],
+  // A ledger, not another hamburger: bulleted rows read as "transactions".
+  list: [
+    circle(5.6, 7, 1.15),
+    "M9.8 7h9.4",
+    circle(5.6, 12, 1.15),
+    "M9.8 12h9.4",
+    circle(5.6, 17, 1.15),
+    "M9.8 17h9.4",
+  ],
+  // Two arrows passing each other, which is the shape people already know.
+  swap: ["M4.6 8.6h11.6", "m13.5 5.7 2.9 2.9-2.9 2.9", "M19.4 15.4H7.8", "m10.5 12.5-2.9 2.9 2.9 2.9"],
+  download: ["M12 4.2v11", "m7.7 10.8 4.3 4.4 4.3-4.4", "M5.2 19.6h13.6"],
 };
 
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {

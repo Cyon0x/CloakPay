@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import { PrivacyPicker } from "./payment/parts";
+import { AMOUNT_PRESETS, validateAmount } from "@/lib/amount";
+import { SettlementPicker } from "./payment/parts";
+import { AmountInput } from "./payment/AmountInput";
 import { CopyField } from "./CopyField";
 import { QrCode } from "./QrCode";
 
@@ -18,25 +20,52 @@ import { QrCode } from "./QrCode";
  */
 export function LinkComposer({
   denominations,
-  poolDeployed,
+  privateReady,
+  poolSentence,
+  symbol,
+  decimals,
   appUrl,
 }: {
-  denominations: { id: string; label: string }[];
-  poolDeployed: boolean;
+  denominations: { id: string; label: string; wei: string }[];
+  privateReady: boolean;
+  poolSentence: string;
+  symbol: string;
+  decimals: number;
   appUrl: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [denominationId, setDenominationId] = useState(denominations[1]?.id ?? denominations[0]?.id ?? "");
-  const [mode, setMode] = useState<"private" | "public">(poolDeployed ? "private" : "public");
+  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState<"private" | "public">(privateReady ? "private" : "public");
   const [oneTime, setOneTime] = useState(false);
   const [expires, setExpires] = useState("0");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
 
+  const denominationWei = useMemo(
+    () => denominations.map((item) => BigInt(item.wei)),
+    [denominations],
+  );
+  const denominationLabels = useMemo(
+    () => denominations.map((item) => item.label.split(" ")[0]),
+    [denominations],
+  );
+  const amountCheck = validateAmount(amount, {
+    decimals,
+    symbol,
+    allowedWei: mode === "private" ? denominationWei : null,
+  });
+  // An empty amount is a link that lets the payer choose. Anything typed has to
+  // be a real amount, so a typo cannot become a silently different request.
+  const amountOk = amount.trim() === "" || amountCheck.ok;
+
   async function create() {
+    if (!amountOk) {
+      setError(amountCheck.ok ? null : amountCheck.reason);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -46,7 +75,7 @@ export function LinkComposer({
         body: JSON.stringify({
           title: title.trim() || undefined,
           description: description.trim() || undefined,
-          denominationId,
+          amount: amount.trim() || undefined,
           mode,
           reusable: !oneTime,
           maxUses: oneTime ? 1 : undefined,
@@ -129,25 +158,32 @@ export function LinkComposer({
             />
           </label>
 
-          <fieldset className="fieldset">
-            <legend className="label">Amount</legend>
-            <div className="amount-grid">
-              {denominations.map((denomination) => (
-                <button
-                  key={denomination.id}
-                  type="button"
-                  className="amount-choice"
-                  aria-pressed={denominationId === denomination.id}
-                  onClick={() => setDenominationId(denomination.id)}
-                >
-                  <span className="amount-value mono">{denomination.label.split(" ")[0]}</span>
-                  <span className="amount-unit">HYPE</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <AmountInput
+            id="link-amount"
+            value={amount}
+            onChange={setAmount}
+            symbol={symbol}
+            decimals={decimals}
+            balanceWei={null}
+            allowedWei={mode === "private" ? denominationWei : null}
+            presets={mode === "private" ? denominationLabels : AMOUNT_PRESETS}
+            label={`Amount in ${symbol}`}
+            hint={
+              mode === "private"
+                ? "A private link may only request one of the pool's fixed sizes."
+                : "Leave this empty for a link the payer decides the amount on."
+            }
+          />
 
-          <PrivacyPicker value={mode} onChange={setMode} poolDeployed={poolDeployed} />
+          <SettlementPicker
+            value={mode}
+            onChange={(next) => {
+              setMode(next);
+              setAmount("");
+            }}
+            privateReady={privateReady}
+            privateBlocker={poolSentence}
+          />
 
           <fieldset className="fieldset">
             <legend className="label">Rules</legend>
@@ -180,10 +216,10 @@ export function LinkComposer({
 
       <div className="stack">
         {error ? <Notice tone="error">{error}</Notice> : null}
-        {!poolDeployed ? (
+        {!privateReady ? (
           <Notice tone="warn" title="Private links are unavailable">
-            Until the shielded pool has a recorded deployment, links can only request a direct transfer.
-            The payer is told exactly that.
+            {poolSentence} Until then, links can only request a direct transfer, and the payer is told exactly
+            that.
           </Notice>
         ) : null}
         <Card>
@@ -198,7 +234,12 @@ export function LinkComposer({
               It never carries a private key, a note secret, or a wallet address. Anyone who has the link
               can open the page, which is worth remembering before you post it publicly.
             </p>
-            <button className="btn btn-primary btn-block" style={{ marginTop: 18 }} disabled={busy} onClick={create}>
+            <button
+              className="btn btn-primary btn-block"
+              style={{ marginTop: 18 }}
+              disabled={busy || !amountOk}
+              onClick={create}
+            >
               {busy ? "Creating…" : "Create link"}
             </button>
           </div>

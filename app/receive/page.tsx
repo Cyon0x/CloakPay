@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { env } from "@/lib/env";
 import { activeChain, explorerAddress } from "@/config/chain";
-import { poolIsDeployed } from "@/config/pool";
+import { poolStatus, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 
 export const metadata = { title: "Receive" };
 export const dynamic = "force-dynamic";
@@ -20,10 +20,11 @@ export default async function ReceivePage() {
   `;
   const wallet = rows[0];
   const identity = `${env.appUrl}/u/${user.username}`;
-  const poolLive = poolIsDeployed(activeChain.chainId);
+  const poolLive = poolStatus(activeChain.chainId) === "ready";
   // "Accepting private payments" is only true when both halves exist: a
   // registered viewing key and a pool to route the payment through.
-  const acceptingPrivately = poolLive && Boolean(wallet?.viewing_key_id);
+  const acceptingPrivately = privatePaymentsAvailable(activeChain.chainId) && Boolean(wallet?.viewing_key_id);
+  const poolSentence = poolStatusSentence(activeChain.chainId);
 
   return (
     <AuthedShell>
@@ -64,7 +65,7 @@ export default async function ReceivePage() {
                     ? "Your viewing key is registered and the pool is live. Payers seal notes to your key, and only you can open them."
                     : poolLive
                       ? "Finish onboarding to register a viewing key. Until then nobody can pay you privately."
-                      : "The shielded pool has no deployment on this network yet. Your viewing key is ready, so private payments switch on the moment it does. Until then everything settles as a direct transfer and is labelled Public."}
+                      : `${poolSentence} Your viewing key is ready, so private payments switch on the moment the flow ships. Until then everything settles as a direct transfer and is labelled Public.`}
                 </p>
               </div>
             </Card>

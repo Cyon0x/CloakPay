@@ -4,7 +4,7 @@ import { SendForm } from "@/components/SendForm";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { activeChain } from "@/config/chain";
-import { DENOMINATIONS, getPoolDeployment } from "@/config/pool";
+import { DENOMINATIONS, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 
 export const metadata = { title: "Send" };
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function SendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string; amount?: string }>;
+  searchParams: Promise<{ to?: string }>;
 }) {
   const user = await currentUser();
   if (!user) return null;
@@ -21,18 +21,20 @@ export default async function SendPage({
   const [wallet] = await db()<{ address: string }[]>`
     select address from wallets where user_id = ${user.userId}
   `;
-  const deployment = getPoolDeployment(activeChain.chainId);
 
   return (
     <AuthedShell>
       <PageHeader
         title="Send"
-        subtitle="Pay a username. Choose a fixed amount, then decide whether it settles privately or as a normal transfer."
+        subtitle="Pay a CloakPay username privately, or send a public transfer to an external wallet address. The two settle differently and the form says which is which."
       />
       <SendForm
         walletAddress={wallet?.address ?? null}
-        poolDeployed={Boolean(deployment)}
+        privateReady={privatePaymentsAvailable(activeChain.chainId)}
+        poolSentence={poolStatusSentence(activeChain.chainId)}
         faucetUrl={activeChain.faucetUrl}
+        symbol={activeChain.nativeToken.symbol}
+        decimals={activeChain.nativeToken.decimals}
         denominations={DENOMINATIONS.map((denomination) => ({
           id: denomination.id,
           label: denomination.label,

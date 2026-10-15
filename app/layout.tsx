@@ -30,6 +30,8 @@ export const metadata: Metadata = {
     icon: [{ url: "/icon.png", type: "image/png" }],
     apple: [{ url: "/apple-icon.png" }],
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "CloakPay", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -55,6 +57,21 @@ export const viewport: Viewport = {
  */
 const THEME_BOOTSTRAP = `(function(){try{var s=localStorage.getItem("cloakpay.theme");var t=(s==="light"||s==="dark")?s:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");var r=document.documentElement;r.dataset.theme=t;r.style.colorScheme=t;}catch(e){document.documentElement.dataset.theme="light";}})();`;
 
+/**
+ * Captures the browser's install prompt when it is offered.
+ *
+ * Chrome fires `beforeinstallprompt` early, often before React has hydrated,
+ * and the event is single-use: it must be kept somewhere to replay later. Store
+ * it, and announce it so the menu can enable its Install action. Nothing here
+ * installs anything by itself, and no browser can be made to install an app
+ * without its owner agreeing to the prompt.
+ */
+const INSTALL_BOOTSTRAP = `(function(){try{
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__cloakpayInstallPrompt=e;window.dispatchEvent(new Event("cloakpay:installable"));});
+window.addEventListener("appinstalled",function(){window.__cloakpayInstallPrompt=undefined;});
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}
+}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // The bootstrap script writes to <html> before React hydrates, so the
@@ -62,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_BOOTSTRAP }} />
       </head>
       <body>
         <a className="skip-link" href="#main">

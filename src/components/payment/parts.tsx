@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import { validateExternalAddress } from "@/lib/address";
 
 export interface Recipient {
   username: string;
@@ -11,7 +12,13 @@ export interface Recipient {
   canReceivePrivately: boolean;
 }
 
-/** Username search. Results reveal a payment identity and nothing else. */
+/**
+ * Username lookup for the private flow.
+ *
+ * This control deals in usernames only. The wallet behind the account is never
+ * fetched, never rendered, and never returned to this component, so a private
+ * payment cannot leak an address through the payer's own screen.
+ */
 export function RecipientPicker({
   value,
   onSelect,
@@ -85,7 +92,7 @@ export function RecipientPicker({
   return (
     <div className="search-block">
       <label className="field">
-        <span className="label">Recipient</span>
+        <span className="label">Recipient username</span>
         <span className="input-with-icon">
           <Icon name="search" size={16} className="input-icon" />
           <input
@@ -104,7 +111,8 @@ export function RecipientPicker({
           />
         </span>
         <span className="hint" id="recipient-hint">
-          Two or more characters. You pay a username; the wallet behind it stays hidden.
+          Two or more characters. CloakPay resolves the account by username; a wallet address has no place in
+          this form.
         </span>
       </label>
 
@@ -128,7 +136,7 @@ export function RecipientPicker({
                   <span className="tiny muted">{result.displayName ?? "CloakPay account"}</span>
                 </span>
                 <Badge kind={result.canReceivePrivately ? "private" : "setup"}>
-                  {result.canReceivePrivately ? "Private ready" : "Public only"}
+                  {result.canReceivePrivately ? "Private ready" : "No viewing key"}
                 </Badge>
               </button>
             </li>
@@ -143,48 +151,77 @@ export function RecipientPicker({
   );
 }
 
-export function AmountPicker({
-  denominations,
+/**
+ * The external-wallet destination field.
+ *
+ * This is the only place in the product that asks for an address, and it is
+ * paired with a plain statement that the transfer is public. Validation reports
+ * shape, checksum, zero-address and self-send problems rather than letting a
+ * doomed transfer reach the signing step.
+ */
+export function AddressPicker({
   value,
   onChange,
+  self,
+  disabled,
 }: {
-  denominations: { id: string; label: string }[];
   value: string;
-  onChange: (id: string) => void;
+  onChange: (value: string) => void;
+  self?: string | null;
+  disabled?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
+  const trimmed = value.trim();
+  const result = validateExternalAddress(trimmed, self);
+  const showError = !focused && trimmed !== "" && !result.ok;
+
   return (
-    <fieldset className="fieldset">
-      <legend className="label">Amount</legend>
-      <div className="amount-grid">
-        {denominations.map((denomination) => (
-          <button
-            key={denomination.id}
-            type="button"
-            className="amount-choice"
-            aria-pressed={value === denomination.id}
-            onClick={() => onChange(denomination.id)}
-          >
-            <span className="amount-value mono">{denomination.label.split(" ")[0]}</span>
-            <span className="amount-unit">HYPE</span>
-          </button>
-        ))}
-      </div>
-      <p className="hint">
-        The pool accepts fixed sizes only. Fixed denominations are what keep amounts from giving away
-        which payment is which.
-      </p>
-    </fieldset>
+    <label className="field">
+      <span className="label">Recipient wallet address</span>
+      <input
+        className="input mono"
+        value={value}
+        onChange={(event) => onChange(event.target.value.trim())}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="0x…"
+        autoComplete="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        disabled={disabled}
+        aria-invalid={showError || undefined}
+        aria-describedby="address-hint"
+      />
+      <span className="hint" id="address-hint" aria-live="polite">
+        {showError ? (
+          <span className="hint-error">{result.reason}</span>
+        ) : (
+          `An address on ${"Elysium Testnet"}. This transfer is public.`
+        )}
+      </span>
+    </label>
   );
 }
 
-export function PrivacyPicker({
+/**
+ * The settlement choice.
+ *
+ * The two options are different recipients, not two settings for the same
+ * transfer: one takes a CloakPay username and can only settle through the
+ * shielded pool, the other takes a wallet address and settles as an ordinary
+ * public transfer. Private is disabled unless the pool is deployed *and* the
+ * client flow can spend a note.
+ */
+export function SettlementPicker({
   value,
   onChange,
-  poolDeployed,
+  privateReady,
+  privateBlocker,
 }: {
   value: "private" | "public";
   onChange: (value: "private" | "public") => void;
-  poolDeployed: boolean;
+  privateReady: boolean;
+  privateBlocker: string;
 }) {
   return (
     <fieldset className="fieldset">
@@ -194,7 +231,7 @@ export function PrivacyPicker({
           type="button"
           className="choice"
           aria-pressed={value === "private"}
-          disabled={!poolDeployed}
+          disabled={!privateReady}
           onClick={() => onChange("private")}
         >
           <span className="choice-icon">
@@ -202,13 +239,12 @@ export function PrivacyPicker({
           </span>
           <span className="grow">
             <span className="choice-title">
-              Private <Badge kind={poolDeployed ? "private" : "setup"} />
+              Private — CloakPay users <Badge kind={privateReady ? "private" : "setup"} />
             </span>
             <span className="choice-body">
-              {poolDeployed
-                ? "Into the shielded pool. The chain sees a deposit and later a withdrawal, with nothing joining them."
-                : "The shielded pool has no deployment on this network yet, so this cannot be selected."}
+              Send to a CloakPay username using the supported private payment flow.
             </span>
+            {!privateReady ? <span className="choice-note">{privateBlocker}</span> : null}
           </span>
         </button>
         <button
@@ -222,11 +258,10 @@ export function PrivacyPicker({
           </span>
           <span className="grow">
             <span className="choice-title">
-              Direct transfer <Badge kind="public" />
+              Direct Transfer — External wallets <Badge kind="public" />
             </span>
             <span className="choice-body">
-              A normal HYPE transfer between two wallets. Anyone can look it up, including the amount and
-              both addresses.
+              Send a public on-chain transfer to an external wallet address.
             </span>
           </span>
         </button>
@@ -235,20 +270,25 @@ export function PrivacyPicker({
   );
 }
 
+/** Confirmation of a settled public transfer. Every value shown is from the chain. */
 export function Receipt({
   amountLabel,
+  symbol,
   txHash,
   explorerUrl,
   status,
   blockNumber,
-  recipient,
+  toLabel,
+  toAddress,
 }: {
   amountLabel: string;
+  symbol?: string;
   txHash: string;
   explorerUrl: string;
   status: "submitted" | "confirmed" | "failed";
   blockNumber?: bigint | null;
-  recipient: string;
+  toLabel: string;
+  toAddress?: string | null;
 }) {
   return (
     <div className="receipt">
@@ -258,10 +298,20 @@ export function Receipt({
         </p>
         <Badge kind={status === "confirmed" ? "confirmed" : status === "failed" ? "failed" : "pending"} />
       </div>
-      <p className="receipt-amount mono">{amountLabel} HYPE</p>
+      <p className="receipt-amount mono">
+        {amountLabel} {symbol ?? "HYPE"}
+      </p>
       <dl className="kv" style={{ marginTop: 14 }}>
-        <dt>Paid to</dt>
-        <dd className="mono">@{recipient}</dd>
+        <dt>Sent to</dt>
+        <dd className="mono">{toLabel}</dd>
+        {toAddress ? (
+          <>
+            <dt>Address</dt>
+            <dd className="mono" style={{ wordBreak: "break-all" }}>
+              {toAddress}
+            </dd>
+          </>
+        ) : null}
         <dt>Settlement</dt>
         <dd>Direct transfer</dd>
         {blockNumber !== undefined && blockNumber !== null ? (
@@ -287,13 +337,12 @@ export function Receipt({
   );
 }
 
-export function PoolUnavailableNotice({ faucetUrl }: { faucetUrl: string }) {
+/** The one sentence about the pool, shared so no two screens can disagree. */
+export function PoolUnavailableNotice({ sentence, faucetUrl }: { sentence: string; faucetUrl?: string }) {
   return (
-    <Notice tone="warn" title="Privacy is not switched on yet">
-      The shielded pool contracts are written, compiled and covered by tests, but no deployment has been
-      recorded for {""}
-      this network. Until an address exists, CloakPay will not offer a private payment, and it will not
-      quietly send a public one instead. Direct transfers are labelled Public wherever they appear.
+    <Notice tone="warn" title="Private payments are not open yet">
+      {sentence} CloakPay will not quietly send a public transfer in place of a private one, so the private
+      option stays disabled until it can be done properly.
       {faucetUrl ? (
         <>
           {" "}

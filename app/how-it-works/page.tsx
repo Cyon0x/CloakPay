@@ -3,7 +3,7 @@ import { TopBar } from "@/components/Nav";
 import { currentUser } from "@/lib/session";
 import { Notice } from "@/components/ui";
 import { activeChain } from "@/config/chain";
-import { getPoolDeployment, poolIsDeployed } from "@/config/pool";
+import { getPoolDeployment, poolStatus } from "@/config/pool";
 
 export const metadata = { title: "How it works" };
 
@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HowItWorksPage() {
   const user = await currentUser();
-  const poolLive = poolIsDeployed(activeChain.chainId);
+  const poolLive = poolStatus(activeChain.chainId) === "ready";
   const deployment = getPoolDeployment(activeChain.chainId);
   return (
     <div className="app-shell">

@@ -4,7 +4,8 @@ import { Mark } from "@/components/Brand";
 import { Icon } from "@/components/Icon";
 import { currentUser } from "@/lib/session";
 import { activeChain } from "@/config/chain";
-import { DENOMINATIONS, poolIsDeployed } from "@/config/pool";
+import { DENOMINATIONS, poolStatus } from "@/config/pool";
+import { HIDDEN, NEVER, VISIBLE } from "@/config/privacy";
 
 /**
  * The landing page.
@@ -48,29 +49,10 @@ const STEPS = [
   { title: "Keep the receipt", body: "Every payment records its real status and links to the transaction that settled it." },
 ];
 
-const HIDDEN = [
-  "The connection between a payer and a recipient",
-  "Which deposit funded which withdrawal",
-  "How many payments one person has received",
-  "The exact amount, within the pool's fixed denominations",
-];
-
-const VISIBLE = [
-  "That some address deposited a given denomination",
-  "That some address withdrew a given denomination",
-  "Timing, and who paid the gas",
-  "The size of the pool, and therefore the anonymity set",
-];
-
-const NEVER = [
-  "Your note secrets, which never leave your device unsealed",
-  "Your wallet's private key",
-  "Your Google or X identity",
-];
-
 export default async function LandingPage() {
   const user = await currentUser();
-  const poolLive = poolIsDeployed(activeChain.chainId);
+  const pool = poolStatus(activeChain.chainId);
+  const poolLive = pool === "ready";
 
   return (
     <div className="app-shell">
@@ -109,7 +91,9 @@ export default async function LandingPage() {
                 <span className={`dot ${poolLive ? "dot-ok" : "dot-warn"}`} aria-hidden="true" />
                 {poolLive
                   ? `Shielded pool live on ${activeChain.name}. Chain ${activeChain.chainId}, testnet only.`
-                  : `Wallets, usernames, payment links and direct transfers are live on ${activeChain.name}. The shielded pool is built and tested but not deployed, so private payments are not offered yet.`}
+                  : pool === "in-development"
+                    ? `Wallets, usernames, payment links and direct transfers are live on ${activeChain.name}. The shielded pool is deployed, but the deposit and withdrawal flow is still being built, so private payments are not offered yet.`
+                    : `Wallets, usernames, payment links and direct transfers are live on ${activeChain.name}. The shielded pool is built and tested but not deployed, so private payments are not offered yet.`}
               </p>
             </div>
           </div>
@@ -235,7 +219,7 @@ export default async function LandingPage() {
             <Link href="/how-it-works">How it works</Link>
             <Link href="/security">Security</Link>
             <Link href="/faq">FAQ</Link>
-            <Link href="/privacy">Privacy policy</Link>
+            <Link href="/privacy/policy">Privacy policy</Link>
             <Link href="/terms">Terms of service</Link>
             <a href={activeChain.explorerUrl} rel="noreferrer noopener" target="_blank">
               Explorer

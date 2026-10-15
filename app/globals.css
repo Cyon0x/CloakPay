@@ -963,7 +963,7 @@ html[data-theme="dark"] {
   html[data-theme="dark"] .theme-toggle .theme-glyph.to-light { display: block; }
 
   /* The menu control appears only where the horizontal nav is hidden. */
-  .menu-toggle { display: none; }
+  .menu-toggle { display: inline-grid; }
   @media (max-width: 720px) {
     .menu-toggle { display: inline-grid; }
   }
@@ -992,4 +992,285 @@ html[data-theme="dark"] {
     .topbar-getstarted { display: none; }
     .menu-panel-getstarted { display: inline-flex; }
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Dashboard: the balance leads, then the username, then the
+   two things people came to do.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .page-header-tight { margin-bottom: 18px; }
+
+  .balance-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px 24px 22px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-paper-0);
+    box-shadow: var(--shadow-card);
+  }
+  .balance-main { flex: 1 1 320px; min-width: 0; }
+  .balance-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-slate-500);
+  }
+  .balance-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: clamp(34px, 6.5vw, 46px);
+    line-height: 1.05;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    color: var(--color-ink-950);
+    font-variant-numeric: tabular-nums;
+  }
+  .balance-unit { font-size: 0.4em; letter-spacing: 0.07em; color: var(--color-slate-500); }
+  .balance-skeleton { display: inline-block; width: 168px; height: 0.86em; border-radius: var(--radius-sm); }
+  .balance-unavailable { color: var(--color-slate-400); }
+  .balance-meta { margin-top: 10px; font-size: 13px; line-height: 1.5; color: var(--color-slate-600); }
+
+  .username-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .username-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-100);
+    font-size: 14.5px;
+    color: var(--color-ink-900);
+  }
+  .balance-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .balance-actions .btn { justify-content: center; min-width: 116px; }
+
+  .privacy-teaser { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+
+  @media (max-width: 560px) {
+    .balance-panel { padding: 20px 18px; }
+    .balance-actions { width: 100%; }
+    .balance-actions .btn { flex: 1; }
+    .privacy-teaser { flex-wrap: wrap; }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Amount entry. The largest control in any form, because typing
+   an amount is the thing the form is for.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .amount-field { display: flex; flex-direction: column; gap: 8px; }
+  .amount-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    background: var(--color-paper-0);
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  .amount-box:focus-within {
+    border-color: var(--color-accent-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-500) 16%, transparent);
+  }
+  .amount-box-invalid { border-color: var(--color-err-600); }
+  .amount-box-invalid:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-err-600) 16%, transparent); }
+  .amount-input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 0;
+    border: 0;
+    outline: none;
+    background: none;
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--color-ink-950);
+    font-variant-numeric: tabular-nums;
+  }
+  .amount-input::placeholder { color: var(--color-slate-400); font-weight: 400; }
+  .amount-symbol { flex: none; font-size: 13px; letter-spacing: 0.08em; color: var(--color-slate-500); }
+
+  .preset-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .preset {
+    padding: 8px 12px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-0);
+    color: var(--color-ink-800);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .preset:hover:not(:disabled) { background: var(--color-paper-100); border-color: var(--color-line-strong); }
+  .preset:disabled { opacity: 0.5; cursor: not-allowed; }
+  .preset[aria-pressed="true"] {
+    background: var(--color-ink-950);
+    border-color: var(--color-ink-950);
+    color: var(--color-paper-50);
+  }
+
+  .hint-error { color: var(--color-err-600); }
+  .choice-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--color-warn-600);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Navigation drawer
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .drawer-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: color-mix(in srgb, var(--color-ink-950) 32%, transparent);
+  }
+  .drawer {
+    position: fixed;
+    z-index: 61;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 88vw);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    background: var(--color-paper-50);
+    border-left: 1px solid var(--color-line-soft);
+    box-shadow: var(--shadow-pop);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .drawer { animation: drawer-in 180ms ease; }
+    @keyframes drawer-in {
+      from { transform: translateX(14px); opacity: 0; }
+      to { transform: none; opacity: 1; }
+    }
+  }
+
+  .drawer-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-line-soft);
+    background: var(--color-paper-50);
+  }
+  .drawer-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-slate-500);
+  }
+
+  .drawer-nav { display: flex; flex-direction: column; gap: 1px; padding: 8px; }
+  .drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-ink-800);
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .drawer-item svg { flex: none; color: var(--color-slate-500); }
+  .drawer-item:hover { background: var(--color-paper-100); color: var(--color-ink-950); }
+  .drawer-item[aria-current="page"] { background: var(--color-paper-100); color: var(--color-ink-950); font-weight: 500; }
+  .drawer-item[aria-current="page"] svg { color: var(--color-ink-900); }
+  .drawer-item-button { text-align: left; }
+
+  .drawer-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent-500); }
+
+  /* Not available yet, and styled so it cannot be mistaken for available. */
+  .drawer-item-disabled { color: var(--color-slate-400); cursor: not-allowed; }
+  .drawer-item-disabled svg { color: var(--color-slate-400); }
+  .drawer-item-disabled:hover { background: none; color: var(--color-slate-400); }
+
+  .drawer-soon {
+    flex: none;
+    padding: 3px 7px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-xs);
+    background: var(--color-paper-100);
+    color: var(--color-slate-500);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .drawer-done { border-color: var(--color-ok-line); background: var(--color-ok-100); color: var(--color-ok-600); }
+
+  .drawer-note {
+    margin: 2px 12px 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-100);
+  }
+  .drawer-note p + p { margin-top: 8px; }
+
+  .drawer-sep { display: block; height: 1px; margin: 8px 12px; background: var(--color-line-soft); }
+  .drawer-form { margin: 0; }
+  .drawer-item-danger, .drawer-item-danger svg { color: var(--color-err-600); }
+  .drawer-item-danger:hover { background: var(--color-err-100); color: var(--color-err-600); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Ledger and the faucet page
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .ledger { list-style: none; margin: 0; padding: 0; }
+  .ledger-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-line-soft);
+  }
+  .ledger-row:last-child { border-bottom: 0; }
+  .ledger-main { flex: 1 1 240px; min-width: 0; }
+  .ledger-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+  @media (max-width: 560px) {
+    .ledger-row { padding: 14px; }
+    .ledger-side { align-items: flex-start; text-align: left; }
+  }
+
+  .faucet-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding-left: 20px;
+    color: var(--color-slate-700);
+    font-size: 14px;
+  }
+  .faucet-steps li { line-height: 1.55; }
 }

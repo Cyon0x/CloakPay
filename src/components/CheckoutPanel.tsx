@@ -79,7 +79,7 @@ export function CheckoutPanel({
             explorerUrl={explorerTxUrl(txHash)}
             status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
             blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
-            recipient={link.recipientUsername}
+            toLabel={`@${link.recipientUsername}`}
           />
           <div className="row" style={{ gap: 8, marginTop: 18 }}>
             <Link href="/activity" className="btn btn-secondary btn-sm">

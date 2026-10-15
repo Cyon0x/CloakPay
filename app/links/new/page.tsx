@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui";
 import { LinkComposer } from "@/components/LinkComposer";
 import { currentUser } from "@/lib/session";
 import { env } from "@/lib/env";
-import { DENOMINATIONS, getPoolDeployment } from "@/config/pool";
+import { DENOMINATIONS, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "New payment link" };
@@ -29,8 +29,12 @@ export default async function NewLinkPage() {
         denominations={DENOMINATIONS.map((denomination) => ({
           id: denomination.id,
           label: denomination.label,
+          wei: denomination.wei.toString(),
         }))}
-        poolDeployed={Boolean(getPoolDeployment(activeChain.chainId))}
+        privateReady={privatePaymentsAvailable(activeChain.chainId)}
+        poolSentence={poolStatusSentence(activeChain.chainId)}
+        symbol={activeChain.nativeToken.symbol}
+        decimals={activeChain.nativeToken.decimals}
         appUrl={env.appUrl}
       />
     </AuthedShell>

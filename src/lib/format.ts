@@ -5,6 +5,7 @@
  * component, in a server component, and in the test runner.
  */
 import { DENOMINATIONS, denominationById } from "@/config/pool";
+import { parseAmount } from "./amount";
 
 /** Renders a stored wei amount for display, without floating point. */
 export function formatWei(wei: bigint, decimals = 18, maxFractionDigits = 6): string {
@@ -22,12 +23,9 @@ export function formatWei(wei: bigint, decimals = 18, maxFractionDigits = 6): st
 }
 
 export function parseToWei(input: string, decimals = 18): bigint {
-  const trimmed = input.trim();
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) throw new Error("not a decimal amount");
-  const [whole, fraction = ""] = trimmed.split(".");
-  if (fraction.length > decimals) throw new Error(`at most ${decimals} decimal places`);
-  const padded = fraction.padEnd(decimals, "0");
-  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(padded || "0");
+  const parsed = parseAmount(input, decimals);
+  if (!parsed.ok) throw new Error(parsed.reason);
+  return parsed.wei;
 }
 
 export function denominationLabel(amountWei: bigint | null): string | null {
