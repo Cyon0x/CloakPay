@@ -46,6 +46,8 @@ export function CheckoutPanel({
   isOwner,
   walletAddress,
   poolDeployed,
+  privateReady,
+  privateBlocker,
   faucetUrl,
 }: {
   link: CheckoutLink;
@@ -53,6 +55,15 @@ export function CheckoutPanel({
   isOwner: boolean;
   walletAddress: string | null;
   poolDeployed: boolean;
+  /**
+   * Whether the browser can actually complete a private payment on this chain.
+   * A deployed pool is not the same thing: without the deposit and withdrawal
+   * flow there is no way to spend a note, and this panel must not fall through
+   * to a public transfer for a link that asked for a private one.
+   */
+  privateReady: boolean;
+  /** Why a private payment is unavailable, in the shared by-chain wording. */
+  privateBlocker: string;
   faucetUrl: string;
 }) {
   const settlement = useSettlement();
@@ -155,11 +166,10 @@ export function CheckoutPanel({
             <Notice tone="warn" title="Your wallet is not set up">
               Finish onboarding to create a wallet before paying.
             </Notice>
-          ) : privateRequested && !poolDeployed ? (
+          ) : privateRequested && !privateReady ? (
             <Notice tone="warn" title="This link asks for a private payment">
-              Its owner requested a shielded payment, and the pool has no deployment on this network yet.
-              CloakPay will not settle it as a public transfer, because that would not be the payment that
-              was asked for.
+              Its owner requested a shielded payment. {privateBlocker} CloakPay will not settle it as a
+              public transfer, because that would not be the payment that was asked for.
             </Notice>
           ) : settlement.state.phase === "failed" ? (
             <>

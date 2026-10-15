@@ -28,10 +28,16 @@ export interface PaymentRow {
  *
  * The row is locked so two concurrent claims cannot both pass the check, and
  * the caller gets a stable reason when a link is not claimable.
+ *
+ * Whether a private link can be settled is decided here, before the counter
+ * moves, rather than after the caller gets the row back. A refusal must leave
+ * the link exactly as it was: charging a use for a payment that never happened
+ * would burn a one-time link, and hand the payer a failure and a dead link.
  */
 export async function consumeLinkUse(
   code: string,
   userId: string,
+  options: { privatePaymentsAllowed: boolean },
 ): Promise<
   | { ok: true; linkId: string; amountWei: bigint | null; denominationId: string | null; mode: string; ownerUserId: string }
   | { ok: false; reason: string }
@@ -77,6 +83,9 @@ export async function consumeLinkUse(
     `;
     if (!link.reusable && claimed[0]?.claimed_by_user_id && claimed[0].claimed_by_user_id !== userId) {
       return { ok: false, reason: "already_used" };
+    }
+    if (link.mode === "private" && !options.privatePaymentsAllowed) {
+      return { ok: false, reason: "privacy_unavailable" };
     }
 
     await tx`

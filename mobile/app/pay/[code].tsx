@@ -81,7 +81,7 @@ export default function Checkout() {
   }
 
   const current = link as CheckoutLink;
-  const poolDeployed = Boolean(pool?.pool.deployed);
+  const privateReady = Boolean(pool?.pool.privateReady);
   const isOwner = Boolean(user?.username && user.username === current.recipient.username);
   const privateRequested = current.mode === "private";
 
@@ -155,11 +155,11 @@ export default function Checkout() {
               <Button title="Sign in and continue" style={styles.action} />
             </Link>
           </>
-        ) : privateRequested && !poolDeployed ? (
+        ) : privateRequested && !privateReady ? (
           <Notice tone="warn" title="This link asks for a private payment">
-            Its owner requested a shielded payment, and the pool has no deployment on this network yet.
-            CloakPay will not settle it as a public transfer, because that would not be the payment that was
-            asked for.
+            Its owner requested a shielded payment. The pool is deployed, but the deposit and withdrawal
+            flow is still being built. CloakPay will not settle it as a public transfer, because that would
+            not be the payment that was asked for.
           </Notice>
         ) : settlement.state.phase === "failed" ? (
           <>

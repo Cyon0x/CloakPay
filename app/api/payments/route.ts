@@ -3,7 +3,7 @@ import { assertSameOrigin, fail, handle, ok } from "@/lib/api";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { consumeLinkUse } from "@/lib/payments";
-import { denominationById } from "@/config/pool";
+import { denominationById, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 import { activeChain } from "@/config/chain";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +86,9 @@ export async function POST(request: Request) {
         "A private payment needs its commitment and the sealed note for the recipient.",
       );
     }
+    if (body.privacy === "private" && !privatePaymentsAvailable(activeChain.chainId)) {
+      return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
+    }
     if (body.privacy === "public" && !body.txHash) {
       return fail(400, "public_payment_incomplete", "A public payment needs its transaction hash.");
     }
@@ -103,8 +106,13 @@ export async function POST(request: Request) {
     let linkId: string | null = null;
 
     if (body.linkCode) {
-      const consumed = await consumeLinkUse(body.linkCode, user.userId);
+      const consumed = await consumeLinkUse(body.linkCode, user.userId, {
+        privatePaymentsAllowed: privatePaymentsAvailable(activeChain.chainId),
+      });
       if (!consumed.ok) {
+        if (consumed.reason === "privacy_unavailable") {
+          return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
+        }
         return fail(409, "link_not_claimable", `This link cannot be used right now: ${consumed.reason}.`);
       }
       linkId = consumed.linkId;

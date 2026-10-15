@@ -35,7 +35,7 @@ export default function Receive() {
   const username = user?.username ?? "";
   const identity = `${APP_URL}/u/${username}`;
   const linkUrl = created ? `${APP_URL}/pay/${created}` : null;
-  const canReceivePrivately = Boolean(pool?.pool.deployed);
+  const canReceivePrivately = Boolean(pool?.pool.privateReady);
 
   async function copy(label: string, value: string) {
     await Clipboard.setStringAsync(value);
@@ -113,7 +113,7 @@ export default function Receive() {
           <Text style={styles.muted}>
             {canReceivePrivately
               ? "Yes. Your viewing key is published, so a payer can seal a note the shielded pool can settle."
-              : `Not yet. The shielded pool has no deployment on ${pool?.chain.name ?? "this network"}, so a payment to you arrives as a public transfer. Your viewing key is still published, so nothing has to change when the pool goes live.`}
+              : `Not yet. The shielded pool is deployed on ${pool?.chain.name ?? "this network"}, but the deposit and withdrawal flow is still being built, so a payment to you arrives as a public transfer. Your viewing key is still published, so nothing has to change when the pool goes live.`}
           </Text>
         </Card>
 

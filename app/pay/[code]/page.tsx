@@ -7,7 +7,7 @@ import { CheckoutPanel, type CheckoutLink } from "@/components/CheckoutPanel";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { activeChain } from "@/config/chain";
-import { getPoolDeployment } from "@/config/pool";
+import { getPoolDeployment, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +104,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
             isOwner={viewer?.userId === link.owner_user_id}
             walletAddress={wallet?.address ?? null}
             poolDeployed={Boolean(getPoolDeployment(activeChain.chainId))}
+            privateReady={privatePaymentsAvailable(activeChain.chainId)}
+            privateBlocker={poolStatusSentence(activeChain.chainId)}
             faucetUrl={activeChain.faucetUrl}
           />
 

@@ -1,6 +1,11 @@
 import { handle, ok } from "@/lib/api";
 import { activeChain, explorerAddress } from "@/config/chain";
-import { DENOMINATIONS, MERKLE_TREE_DEPTH, getPoolDeployment } from "@/config/pool";
+import {
+  DENOMINATIONS,
+  MERKLE_TREE_DEPTH,
+  getPoolDeployment,
+  privatePaymentsAvailable,
+} from "@/config/pool";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +14,12 @@ export const dynamic = "force-dynamic";
  *
  * `deployed` is false until a real deployment is recorded, and the UI is
  * expected to say so rather than offering a deposit that would fail.
+ *
+ * `privateReady` is the narrower question and the one clients should gate on:
+ * a deployed pool is not by itself a private payment, because without the
+ * deposit and withdrawal flow there is no way to spend a note. Keeping the two
+ * apart is what stops a client from offering a private payment the server will
+ * refuse with `privacy_unavailable`.
  */
 export async function GET() {
   try {
@@ -31,6 +42,7 @@ export async function GET() {
           wei: d.wei.toString(),
         })),
         deployed: Boolean(deployment),
+        privateReady: privatePaymentsAvailable(activeChain.chainId),
         address: deployment?.pool ?? null,
         verifier: deployment?.verifier ?? null,
         explorer: deployment ? explorerAddress(deployment.pool) : null,

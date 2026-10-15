@@ -84,12 +84,16 @@ export async function POST(request: Request) {
     let destination: string | null = null;
 
     if (body.linkCode) {
-      const consumed = await consumeLinkUse(body.linkCode, user.userId);
+      const consumed = await consumeLinkUse(body.linkCode, user.userId, {
+        privatePaymentsAllowed: privatePaymentsAvailable(activeChain.chainId),
+      });
       if (!consumed.ok) {
+        // A private link that cannot be settled is refused before its use
+        // counter moves, so the link is still there when the flow is ready.
+        if (consumed.reason === "privacy_unavailable") {
+          return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
+        }
         return fail(409, "link_not_claimable", `This link cannot be used right now: ${consumed.reason}.`);
-      }
-      if (consumed.mode === "private" && !privatePaymentsAvailable(activeChain.chainId)) {
-        return fail(409, "privacy_unavailable", poolStatusSentence(activeChain.chainId));
       }
       linkId = consumed.linkId;
       recipientId = consumed.ownerUserId;

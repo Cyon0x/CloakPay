@@ -51,7 +51,7 @@ export default function Send() {
         setPool(poolData);
         setWalletAddress(walletData.wallet?.address ?? null);
         setDenominationId(poolData.pool.denominations[1]?.id ?? poolData.pool.denominations[0]?.id ?? "");
-        setPrivacy(poolData.pool.deployed ? "private" : "public");
+        setPrivacy(poolData.pool.privateReady ? "private" : "public");
       } catch (error) {
         setLoadError((error as Error).message);
       }
@@ -203,13 +203,13 @@ export default function Send() {
           <View style={styles.choiceRow}>
             <Pressable
               accessibilityRole="radio"
-              accessibilityState={{ selected: privacy === "private", disabled: !pool?.pool.deployed }}
-              disabled={!pool?.pool.deployed}
+              accessibilityState={{ selected: privacy === "private", disabled: !pool?.pool.privateReady }}
+              disabled={!pool?.pool.privateReady}
               onPress={() => setPrivacy("private")}
               style={[
                 styles.choice,
                 privacy === "private" && styles.choiceOn,
-                !pool?.pool.deployed && styles.choiceDisabled,
+                !pool?.pool.privateReady && styles.choiceDisabled,
               ]}
             >
               <Text style={[styles.choiceTitle, privacy === "private" && styles.choiceTitleOn]}>Private</Text>
@@ -229,10 +229,11 @@ export default function Send() {
               </Text>
             </Pressable>
           </View>
-          {!pool?.pool.deployed ? (
+          {!pool?.pool.privateReady ? (
             <Notice tone="warn" title="Private payments are not available yet">
-              The shielded pool has no deployment on {activeChain.name}. CloakPay will not relabel a visible
-              transfer as private, so today only a public transfer can settle.
+              The shielded pool is deployed on {activeChain.name}, but the deposit and withdrawal flow is
+              still being built. CloakPay will not relabel a visible transfer as private, so today only a
+              public transfer can settle.
             </Notice>
           ) : null}
         </Card>

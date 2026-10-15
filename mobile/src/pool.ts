@@ -3,8 +3,10 @@
  *
  * Denomination sizes are not duplicated here on purpose: the pool accepts a
  * fixed set, and a second copy of that set is a second thing to keep in step.
- * `deployed` is false until a real deployment is recorded on the server, and
- * every screen that shows a privacy label depends on it.
+ * `deployed` records whether a contract address exists on the server, while
+ * `privateReady` is the narrower question of whether this app can actually
+ * complete a private payment. Every privacy label depends on `privateReady`:
+ * a deployed pool with no deposit and withdrawal flow cannot spend a note.
  */
 import { api } from "./api";
 
@@ -28,6 +30,7 @@ export interface PoolInfo {
     depth: number;
     denominations: PoolDenomination[];
     deployed: boolean;
+    privateReady: boolean;
     address: string | null;
     verifier: string | null;
     explorer: string | null;
