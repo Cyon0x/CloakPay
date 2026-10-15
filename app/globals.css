@@ -87,6 +87,20 @@
   --color-shield-600: #3f3a6b;
   --color-shield-100: #eceaf4;
 
+  /* Tint borders. Named so the dark theme can restate them instead of every
+     badge carrying a hard-coded hex that would glow on a dark surface. */
+  --color-ok-line: #cde4d8;
+  --color-warn-line: #efe0c6;
+  --color-err-line: #efd2ce;
+  --color-info-line: #d3e1ee;
+  --color-shield-line: #dbd7ea;
+
+  /* Background wash. Three very low-contrast layers that give the page depth
+     without reading as a gradient. Both themes define their own. */
+  --wash-a: rgba(43, 58, 77, 0.055);
+  --wash-b: rgba(198, 188, 172, 0.2);
+  --wash-c: #f4f2ef;
+
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -105,6 +119,7 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    color-scheme: light;
   }
   body {
     background-color: var(--color-paper-50);
@@ -114,6 +129,7 @@
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    transition: background-color 240ms ease, color 240ms ease;
   }
   h1, h2, h3, h4 {
     font-weight: 600;
@@ -281,12 +297,12 @@
     border: 1px solid transparent;
     white-space: nowrap;
   }
-  .badge-private { background: var(--color-shield-100); color: var(--color-shield-600); border-color: #dbd7ea; }
+  .badge-private { background: var(--color-shield-100); color: var(--color-shield-600); border-color: var(--color-shield-line); }
   .badge-public { background: var(--color-paper-100); color: var(--color-slate-700); border-color: var(--color-line); }
-  .badge-pending { background: var(--color-warn-100); color: var(--color-warn-600); border-color: #efe0c6; }
-  .badge-ok { background: var(--color-ok-100); color: var(--color-ok-600); border-color: #cde4d8; }
-  .badge-failed { background: var(--color-err-100); color: var(--color-err-600); border-color: #efd2ce; }
-  .badge-info { background: var(--color-info-100); color: var(--color-info-600); border-color: #d3e1ee; }
+  .badge-pending { background: var(--color-warn-100); color: var(--color-warn-600); border-color: var(--color-warn-line); }
+  .badge-ok { background: var(--color-ok-100); color: var(--color-ok-600); border-color: var(--color-ok-line); }
+  .badge-failed { background: var(--color-err-100); color: var(--color-err-600); border-color: var(--color-err-line); }
+  .badge-info { background: var(--color-info-100); color: var(--color-info-600); border-color: var(--color-info-line); }
 
   .dot {
     width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none;
@@ -353,9 +369,19 @@
 /* ── Brand + layout primitives ───────────────────────────────────────────── */
 
 @layer components {
-  .brand-link { text-decoration: none; color: inherit; display: inline-block; }
+  /* `flex: none` because the lockup is a pair of images with intrinsic sizes:
+     if the flex algorithm is allowed to shrink the box, the artwork is clipped
+     rather than scaled. The header sheds buttons instead of squeezing the mark. */
+  .brand-link { text-decoration: none; color: inherit; display: inline-block; flex: none; }
   .lockup { display: inline-flex; align-items: center; gap: 9px; }
-  .invert-light { filter: brightness(0) invert(1); opacity: 0.95; }
+
+  /* The master artwork is near-black, so it vanishes on a dark surface. The
+     lightened variant is the same drawing; only one is ever displayed, and the
+     hidden one is out of the accessibility tree as well as the layout. */
+  .brand-img { display: block; }
+  .brand-on-dark { display: none; }
+  html[data-theme="dark"] .brand-on-light { display: none; }
+  html[data-theme="dark"] .brand-on-dark { display: block; }
 
   .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
   .app-body { flex: 1; width: 100%; }
@@ -421,10 +447,10 @@
   }
   .notice-title { font-weight: 600; margin-bottom: 3px; }
   .notice-body { color: var(--color-slate-700); }
-  .notice-info { background: var(--color-info-100); border-color: #d3e1ee; }
-  .notice-warn { background: var(--color-warn-100); border-color: #efe0c6; }
-  .notice-error { background: var(--color-err-100); border-color: #efd2ce; }
-  .notice-ok { background: var(--color-ok-100); border-color: #cde4d8; }
+  .notice-info { background: var(--color-info-100); border-color: var(--color-info-line); }
+  .notice-warn { background: var(--color-warn-100); border-color: var(--color-warn-line); }
+  .notice-error { background: var(--color-err-100); border-color: var(--color-err-line); }
+  .notice-ok { background: var(--color-ok-100); border-color: var(--color-ok-line); }
 
   .stat { padding: 16px 18px; }
   .stat-label {
@@ -463,24 +489,64 @@
   }
   .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-  /* Landing */
+  /* Landing
+     The symbol is the first thing the page establishes, so it owns the left
+     column on wide screens and moves above the copy on narrow ones. The rule
+     between the columns is a hairline, and it exists only while there are two
+     columns for it to separate. */
   .hero {
-    padding: 72px 0 56px;
+    padding: 56px 0 52px;
     border-bottom: 1px solid var(--color-line-soft);
   }
+  .hero-inner { display: grid; gap: 30px; }
+  .hero-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-mark-img {
+    width: clamp(132px, 30vw, 208px);
+    height: auto;
+  }
+  @media (min-width: 900px) {
+    .hero-inner {
+      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+      gap: 0;
+      align-items: center;
+    }
+    .hero-mark {
+      justify-content: flex-start;
+      border-right: 1px solid var(--color-line);
+      padding-right: 64px;
+      min-height: 320px;
+    }
+    .hero-copy { padding-left: 64px; }
+    .hero-mark-img { width: min(100%, 268px); }
+  }
+
   .hero h1 {
-    font-size: clamp(34px, 5.6vw, 58px);
-    letter-spacing: -0.032em;
-    max-width: 17ch;
-    line-height: 1.05;
+    font-size: clamp(32px, 4.4vw, 50px);
+    letter-spacing: -0.03em;
+    max-width: 19ch;
+    line-height: 1.06;
   }
   .hero p.lede {
-    font-size: clamp(15px, 1.5vw, 18px);
+    font-size: clamp(15px, 1.35vw, 17px);
     color: var(--color-slate-700);
-    max-width: 58ch;
-    margin-top: 18px;
+    max-width: 52ch;
+    margin-top: 16px;
   }
-  .hero-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  .hero-actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+
+  .eyebrow {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    color: var(--color-slate-500);
+  }
+  .section-intro { max-width: 60ch; }
+  .section-intro h2 { margin-top: 10px; }
 
   .section { padding: 56px 0; border-bottom: 1px solid var(--color-line-soft); }
   .section:last-child { border-bottom: 0; }
@@ -666,6 +732,43 @@
   }
   .feature h3 { font-size: 16.5px; }
   .feature p { color: var(--color-slate-600); font-size: 13.5px; margin-top: 6px; line-height: 1.55; }
+
+  /* A feature that navigates is a link, so it has to look and behave like one:
+     a column, so the call to action sits on the same line across the row, and
+     an arrow that answers the pointer. */
+  .feature-link {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  .feature-link:hover { border-color: var(--color-line-strong); background: var(--color-paper-100); }
+  .feature-more {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: auto; padding-top: 14px;
+    font-size: 13px; font-weight: 500; color: var(--color-accent-600);
+  }
+  .feature-more svg { transition: transform 160ms ease; }
+  .feature-link:hover .feature-more { color: var(--color-accent-700); }
+  .feature-link:hover .feature-more svg { transform: translateX(3px); }
+
+  .privacy-col { padding: 20px; }
+  .privacy-list { margin-top: 12px; padding-left: 18px; color: var(--color-slate-700); font-size: 13.5px; }
+
+  .step { padding: 22px; }
+  .step h3 { font-size: 17px; margin-top: 6px; }
+  .step p { color: var(--color-slate-600); font-size: 13.5px; margin-top: 6px; line-height: 1.55; }
+
+  /* The denominations belong to the privacy section rather than to a section of
+     their own, so they read as detail rather than as another disconnected block. */
+  .denominations {
+    display: flex; flex-wrap: wrap; gap: 20px 36px;
+    align-items: flex-start; justify-content: space-between;
+    margin-top: 30px; padding-top: 26px;
+    border-top: 1px solid var(--color-line-soft);
+  }
+  .denomination-list { display: flex; flex-wrap: wrap; gap: 10px; }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -697,5 +800,178 @@
       font-weight: 600;
     }
     .mobile-nav .nav-link[aria-current="page"]:hover { background: transparent; }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Theme
+   The whole palette is a set of custom properties, so the dark
+   theme restates the same names rather than restyling components.
+   `html[data-theme="dark"]` is deliberately unlayered: that is
+   what lets it override the values Tailwind's `@theme` emits into
+   the `theme` layer without a specificity fight.
+
+   The values are not an inversion. Surfaces move from warm paper
+   to a cool near-black, text drops to a soft warm grey rather than
+   pure white, and the accent, status and shield hues keep their
+   identity at a lower luminance so a "Private" badge still reads
+   as the same badge in both themes.
+   ───────────────────────────────────────────────────────────── */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Ink runs hot in the dark theme: these are the text colours now. */
+  --color-ink-950: #f3f1ee;
+  --color-ink-900: #e4e1dc;
+  --color-ink-800: #cfcbc5;
+  --color-ink-700: #b0aca6;
+  --color-ink-600: #928e88;
+
+  /* Slate carries secondary text here, so it has to stay legible. */
+  --color-slate-700: #b5b1ab;
+  --color-slate-600: #9c9892;
+  --color-slate-500: #837f7a;
+  --color-slate-400: #6b6863;
+  --color-slate-300: #565350;
+  --color-slate-200: #3f3d3a;
+
+  /* Paper becomes the surface stack, darkest at the page, lighter on cards. */
+  --color-paper-0: #16181c;
+  --color-paper-50: #0b0d10;
+  --color-paper-100: #1c1f24;
+  --color-paper-200: #24272d;
+
+  --color-line-soft: #23262b;
+  --color-line: #2f333a;
+  --color-line-strong: #3f444c;
+
+  --color-accent-700: #cbd7e6;
+  --color-accent-600: #a9bcd3;
+  --color-accent-500: #7f97b3;
+  --color-accent-100: #1b2837;
+
+  --color-ok-600: #6ed2a3;
+  --color-ok-100: #14261e;
+  --color-ok-line: #1f3a2d;
+  --color-warn-600: #dfae6f;
+  --color-warn-100: #2a2115;
+  --color-warn-line: #3d3120;
+  --color-err-600: #f0998e;
+  --color-err-100: #2c1917;
+  --color-err-line: #3d2320;
+  --color-info-600: #8ab7df;
+  --color-info-100: #16222e;
+  --color-info-line: #1e3145;
+  --color-shield-600: #b5addc;
+  --color-shield-100: #1e1c2b;
+  --color-shield-line: #2b2841;
+
+  /* Depth comes from the surface, not from a drop shadow. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 16px 40px -16px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  /* A cool glow top-left, a faint warm lift top-right, settling to the page. */
+  --wash-a: rgba(122, 146, 176, 0.075);
+  --wash-b: rgba(232, 228, 220, 0.025);
+  --wash-c: #101216;
+}
+
+/* The switch itself. Scoped to the toggle so hover and focus changes stay
+   immediate, and wrapped so reduced-motion simply opts out. */
+@media (prefers-reduced-motion: no-preference) {
+  .theming *,
+  .theming *::before,
+  .theming *::after {
+    transition:
+      background-color 240ms ease,
+      border-color 240ms ease,
+      color 240ms ease,
+      fill 240ms ease,
+      box-shadow 240ms ease !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Atmosphere
+   One fixed wash behind the whole application, rather than a
+   gradient per section: the page reads as one continuous surface
+   and the sticky header blurs against it.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .app-shell {
+    position: relative;
+    isolation: isolate;
+  }
+  .app-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1180px 560px at 6% -14%, var(--wash-a), transparent 60%),
+      radial-gradient(940px 480px at 94% 0%, var(--wash-b), transparent 64%),
+      linear-gradient(180deg, var(--wash-c) 0%, var(--color-paper-50) 46%);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Theme toggle and the compact menu
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+  .theme-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-line);
+    background: var(--color-paper-0);
+    color: var(--color-ink-800);
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .theme-toggle:hover { background: var(--color-paper-100); border-color: var(--color-line-strong); color: var(--color-ink-950); }
+  .theme-toggle:active { transform: translateY(1px); }
+
+  /* Both glyphs are always in the DOM and CSS picks one from the attribute the
+     bootstrap script has already written, so the button never spends a frame
+     showing the icon for the wrong theme and there is no hydration mismatch to
+     suppress. Each is named for the theme it switches to. */
+  .theme-toggle .theme-glyph { display: none; }
+  .theme-toggle .theme-glyph.to-dark { display: block; }
+  html[data-theme="dark"] .theme-toggle .theme-glyph.to-dark { display: none; }
+  html[data-theme="dark"] .theme-toggle .theme-glyph.to-light { display: block; }
+
+  /* The menu control appears only where the horizontal nav is hidden. */
+  .menu-toggle { display: none; }
+  @media (max-width: 720px) {
+    .menu-toggle { display: inline-grid; }
+  }
+
+  .menu-panel {
+    border-top: 1px solid var(--color-line-soft);
+    background: var(--color-paper-50);
+  }
+  /* `padding-block`, not `padding`: the shorthand would reset the horizontal
+     gutter this element inherits from `.shell` and run the panel to both edges. */
+  .menu-panel-inner { display: flex; flex-direction: column; gap: 2px; padding-block: 10px 16px; }
+  .menu-panel .nav-link { padding: 11px 10px; font-size: 15px; }
+  .menu-panel-actions .btn { flex: 1; }
+
+  /* The compact header sheds actions from the right as room runs out, and the
+     panel carries exactly the ones it dropped: Sign in first, then Get started
+     once the lockup, the toggle and the menu control no longer leave room for
+     it. Nothing is listed in both places. */
+  .menu-panel-actions { display: none; }
+  .menu-panel-getstarted { display: none; }
+  @media (max-width: 560px) {
+    .topbar-signin { display: none; }
+    .menu-panel-actions { display: flex; gap: 8px; padding-top: 10px; }
+  }
+  @media (max-width: 480px) {
+    .topbar-getstarted { display: none; }
+    .menu-panel-getstarted { display: inline-flex; }
   }
 }

@@ -46,7 +46,13 @@ PAPER = (250, 249, 247, 255)
 # The symbol occupies this share of its square, which keeps it legible at 20px
 # without the artwork touching the box edges.
 MARK_FILL = 0.84
-LIGHTEN = 0.42
+# Tonal lift for dark surfaces. One value for both assets, because they sit in
+# the same lockup and have to read as one mark. It is squeezed from both sides:
+# the wordmark renders at text size so it needs genuine contrast, while the
+# symbol's folds are the artwork and they flatten out as they approach white.
+# 0.62 is where the lettering clears 7:1 on the near-black page and the folds
+# still read apart.
+LIGHTEN = 0.62
 ALPHA_FLOOR = 8
 
 

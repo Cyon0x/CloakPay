@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { BrandLink } from "./Brand";
 import { Icon } from "./Icon";
+import { ThemeToggle } from "./ThemeToggle";
 import type { SessionUser } from "@/lib/session";
 
 export interface NavUser {
@@ -36,11 +38,29 @@ const PUBLIC_ITEMS = [
 
 export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // A route change should always close the panel. Leaving it open over the new
+  // page would hide the content the user just asked for.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // Escape closes it, which is what a menu is expected to do.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   return (
-    <div className="topbar">
+    <header className="topbar">
       <div className="shell topbar-inner">
         <BrandLink markSize={26} />
+
         {user ? (
           <nav className="topbar-nav" aria-label="Primary">
             {DESKTOP_ITEMS.map((item) => (
@@ -57,13 +77,20 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
         ) : (
           <nav className="topbar-nav" aria-label="Primary">
             {PUBLIC_ITEMS.map((item) => (
-              <Link key={item.href} href={item.href} className="nav-link">
+              <Link
+                key={item.href}
+                href={item.href}
+                className="nav-link"
+                aria-current={pathname === item.href ? "page" : undefined}
+              >
                 {item.label}
               </Link>
             ))}
           </nav>
         )}
+
         <div className="topbar-actions">
+          <ThemeToggle />
           {user ? (
             <>
               {user.username ? (
@@ -82,17 +109,54 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
             </>
           ) : (
             <>
-              <Link href="/signin" className="btn btn-secondary btn-sm">
+              <Link href="/signin" className="btn btn-secondary btn-sm topbar-signin">
                 Sign in
               </Link>
-              <Link href="/signin" className="btn btn-primary btn-sm">
+              <Link href="/signin" className="btn btn-primary btn-sm topbar-getstarted">
                 Get started
               </Link>
+              {/* The horizontal nav is hidden on narrow screens, so the menu
+                  control only exists where it is actually needed. */}
+              <button
+                type="button"
+                className="theme-toggle menu-toggle"
+                aria-expanded={menuOpen}
+                aria-controls="topbar-menu"
+                aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+                title={menuOpen ? "Close navigation" : "Open navigation"}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <Icon name={menuOpen ? "close" : "menu"} size={18} strokeWidth={2} />
+              </button>
             </>
           )}
         </div>
       </div>
-    </div>
+
+      {menuOpen && !user ? (
+        <div className="menu-panel" id="topbar-menu">
+          <div className="shell menu-panel-inner">
+            <nav aria-label="Primary, compact">
+              {PUBLIC_ITEMS.map((item) => (
+                <Link key={item.href} href={item.href} className="nav-link">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            {/* The panel carries exactly the actions the compact header had to
+                drop for want of room, and nothing it is still showing. */}
+            <div className="menu-panel-actions">
+              <Link href="/signin" className="btn btn-secondary">
+                Sign in
+              </Link>
+              <Link href="/signin" className="btn btn-primary menu-panel-getstarted">
+                Get started
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </header>
   );
 }
 

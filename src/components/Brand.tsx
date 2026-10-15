@@ -5,62 +5,138 @@ import Link from "next/link";
  *
  * Every asset here is generated from the supplied master artwork by
  * `scripts/brand.py`. The symbol and the lettering are the original pixels,
- * cropped to their measured bounds and, for dark surfaces only, lightened
- * tonally. Nothing is redrawn or re-typeset.
+ * cropped to their measured bounds. The `-light` files are the same pixels
+ * lightened tonally for dark surfaces, not a different drawing and not a CSS
+ * inversion, which would flatten the shading the artwork depends on.
+ *
+ * The theme is only known in the browser, so `tone="auto"` renders both
+ * variants and CSS shows the one that belongs to the active theme. Deciding in
+ * React would either flash the wrong asset or desynchronise the server render
+ * from the live DOM.
  *
  * Intrinsic width and height are always set, so the artwork never causes a
  * layout shift while it loads.
  */
 const WORDMARK_RATIO = 643 / 63;
 
-export function Mark({
-  size = 32,
-  tone = "dark",
+export type BrandTone = "auto" | "dark" | "light";
+
+function classes(...names: (string | false | undefined)[]) {
+  return names.filter(Boolean).join(" ");
+}
+
+/** One variant on its own, for surfaces whose tone is already decided. */
+function Single({
+  src,
+  width,
+  height,
+  style,
   className,
-  alt = "",
+  alt,
 }: {
-  size?: number;
-  tone?: "dark" | "light";
+  src: string;
+  width: number;
+  height: number;
+  style?: React.CSSProperties;
   className?: string;
-  alt?: string;
+  alt: string;
 }) {
-  const src = tone === "light" ? "/brand/mark-light.png" : "/brand/mark.png";
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}
       aria-hidden={alt ? undefined : true}
-      width={size}
-      height={size}
-      className={className}
+      width={width}
+      height={height}
+      className={classes("brand-img", className)}
       decoding="async"
-      style={{ display: "block", height: size, width: size }}
+      style={style}
     />
   );
 }
 
+function Pair({
+  darkSrc,
+  lightSrc,
+  width,
+  height,
+  style,
+  className,
+  alt,
+}: {
+  darkSrc: string;
+  lightSrc: string;
+  width: number;
+  height: number;
+  style?: React.CSSProperties;
+  className?: string;
+  alt: string;
+}) {
+  return (
+    <>
+      <Single
+        src={darkSrc}
+        width={width}
+        height={height}
+        style={style}
+        className={classes("brand-on-light", className)}
+        alt={alt}
+      />
+      <Single
+        src={lightSrc}
+        width={width}
+        height={height}
+        style={style}
+        className={classes("brand-on-dark", className)}
+        alt={alt}
+      />
+    </>
+  );
+}
+
+export function Mark({
+  size = 32,
+  tone = "auto",
+  className,
+  alt = "",
+  fluid = false,
+}: {
+  size?: number;
+  tone?: BrandTone;
+  className?: string;
+  alt?: string;
+  /**
+   * Lets CSS own the rendered size. The intrinsic `width`/`height` attributes
+   * stay, so the box is still reserved before the file loads and the square
+   * aspect ratio is preserved while the class sets a responsive width.
+   */
+  fluid?: boolean;
+}) {
+  const style = fluid ? undefined : { height: size, width: size };
+  const common = { width: size, height: size, style, className, alt };
+
+  if (tone === "dark") return <Single src="/brand/mark.png" {...common} />;
+  if (tone === "light") return <Single src="/brand/mark-light.png" {...common} />;
+  return <Pair darkSrc="/brand/mark.png" lightSrc="/brand/mark-light.png" {...common} />;
+}
+
 export function Wordmark({
   height = 18,
-  tone = "dark",
+  tone = "auto",
   className,
 }: {
   height?: number;
-  tone?: "dark" | "light";
+  tone?: BrandTone;
   className?: string;
 }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={tone === "light" ? "/brand/wordmark-light.png" : "/brand/wordmark.png"}
-      alt="CloakPay"
-      width={Math.round(height * WORDMARK_RATIO)}
-      height={height}
-      className={className}
-      decoding="async"
-      style={{ display: "block", height, width: height * WORDMARK_RATIO }}
-    />
-  );
+  const width = Math.round(height * WORDMARK_RATIO);
+  const style = { height, width: height * WORDMARK_RATIO };
+  const common = { width, height, style, className, alt: "CloakPay" };
+
+  if (tone === "dark") return <Single src="/brand/wordmark.png" {...common} />;
+  if (tone === "light") return <Single src="/brand/wordmark-light.png" {...common} />;
+  return <Pair darkSrc="/brand/wordmark.png" lightSrc="/brand/wordmark-light.png" {...common} />;
 }
 
 /**
@@ -69,10 +145,10 @@ export function Wordmark({
  */
 export function Lockup({
   markSize = 30,
-  tone = "dark",
+  tone = "auto",
 }: {
   markSize?: number;
-  tone?: "dark" | "light";
+  tone?: BrandTone;
 }) {
   return (
     <span className="lockup">
@@ -83,10 +159,10 @@ export function Lockup({
 }
 
 export function BrandLink({
-  tone = "dark",
+  tone = "auto",
   markSize = 28,
 }: {
-  tone?: "dark" | "light";
+  tone?: BrandTone;
   markSize?: number;
 }) {
   return (

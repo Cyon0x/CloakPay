@@ -54,6 +54,26 @@ const PATHS: Record<string, string[]> = {
   refresh: ["M19 12a7 7 0 1 1-2.4-5.3", "M19.4 4.4v4.2h-4.2"],
   arrowRight: ["M5 12h13.4", "m13.4 6.6 5.4 5.4-5.4 5.4"],
   arrowLeft: ["M19 12H5.6", "m10.6 6.6L5.2 12l5.4 5.4"],
+  /* Theme. Drawn to read at 16px on a busy header, so the disc is large and
+     the rays are short and separated rather than thin and crowded. */
+  sun: [
+    circle(12, 12, 4.2),
+    "M12 2.4v2.3",
+    "M12 19.3v2.3",
+    "M2.4 12h2.3",
+    "M19.3 12h2.3",
+    "M5.2 5.2 6.8 6.8",
+    "M17.2 17.2 18.8 18.8",
+    "M18.8 5.2 17.2 6.8",
+    "M6.8 17.2 5.2 18.8",
+  ],
+  /* A crescent: the major arc of the outer circle, closed by a shallower arc of
+     the circle biting into it. Both radii have to be large enough for the chord
+     they span. An undersized radius is not an error SVG reports, it is silently
+     scaled up to suit, which turns the crescent into two opposed semicircles
+     and the shape into a hook. */
+  moon: ["M8.12 3.88A9 9 0 1 0 18.71 18A9.4 9.4 0 0 1 8.12 3.88Z"],
+  menu: ["M4 7.5h16", "M4 12h16", "M4 16.5h16"],
 };
 
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
