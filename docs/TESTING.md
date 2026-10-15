@@ -19,12 +19,21 @@ fixtures they create:
 ```bash
 APP_URL=http://localhost:3200 npm run username:check   # registration, end to end
 APP_URL=http://localhost:3200 npm run privacy:check    # the two payment paths
+APP_URL=http://localhost:3200 npm run nav:check        # the nav drawer, in a browser
 ```
 
 `privacy:check` is the guard on the private/public split: a private payment is
 refused while its flow is unbuilt, an address cannot be smuggled into the
 private path, a private link cannot be settled as a public transfer, a refused
 attempt does not spend the link's use, and an external transfer still opens.
+
+`nav:check` drives a real Chrome and measures the drawer at desktop, tablet and
+phone widths. It exists because the drawer was once broken in a way no other
+check could see: `.topbar` carries a `backdrop-filter`, which makes it the
+containing block for `position: fixed` descendants, so the drawer and its scrim
+were sized to the 60px header instead of the viewport. The menu opened,
+reported `aria-expanded="true"` and rendered its items -- inside a sliver. It
+skips itself when no Chrome or no server is available.
 
 The unit-test runner uses `node --import tsx --test --test-isolation=none`
 rather than the `tsx` CLI, because the CLI's IPC socket is not permitted in a

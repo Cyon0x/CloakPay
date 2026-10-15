@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrandLink } from "./Brand";
@@ -54,9 +55,14 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
+  // The drawer is portalled to `document.body`, so it cannot render until the
+  // document exists.
+  const [mounted, setMounted] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const install = useInstallApp();
+
+  useEffect(() => setMounted(true), []);
 
   // A route change should always close the panel. Leaving it open over the new
   // page would hide the content the user just asked for.
@@ -212,7 +218,13 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
         </div>
       </div>
 
-      {menuOpen ? (
+      {/* The panel is rendered outside the header on purpose. `.topbar` carries
+          a `backdrop-filter`, which makes it the containing block for
+          `position: fixed` descendants -- the drawer would be sized to the 60px
+          header and the scrim would cover only the header, not the page. The
+          header's `z-index` also traps the overlay in its stacking context, so
+          the mobile tab bar would paint over it. A portal escapes both. */}
+      {mounted && menuOpen ? createPortal(
         <>
           <div className="drawer-scrim" onClick={close} aria-hidden="true" />
           <aside
@@ -346,7 +358,8 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
               ) : null}
             </nav>
           </aside>
-        </>
+        </>,
+        document.body,
       ) : null}
     </header>
   );
