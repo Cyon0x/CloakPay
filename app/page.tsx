@@ -11,9 +11,10 @@ import { HIDDEN, NEVER, VISIBLE } from "@/config/privacy";
  * The landing page.
  *
  * Only features that are actually running appear here. The shielded pool is
- * built and tested but has no deployment on this chain, so it is described as
- * work in progress rather than as a capability, and the status line under the
- * hero buttons says exactly which half is live.
+ * built, deployed and verified on testnet, but the deposit and withdrawal flow a
+ * user would drive is still being built, so it is described as work in progress
+ * rather than as a capability, and the status line under the hero buttons says
+ * exactly which half is live.
  */
 const LIVE = [
   {
@@ -37,8 +38,8 @@ const LIVE = [
   {
     icon: "shield",
     title: "Privacy in progress",
-    body: "A shielded pool is written and tested but not yet deployed, so private payments are off and every surface says so.",
-    href: "/security",
+    body: "The shielded pool is written, deployed and verified on testnet. The deposit and withdrawal flow is still being built, so private payments are off and every surface says so.",
+    href: "/privacy",
   },
 ];
 

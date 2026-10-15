@@ -54,10 +54,19 @@ export default async function HowItWorksPage() {
                 The pool is deployed on {activeChain.name} at{" "}
                 <span className="mono">{deployment?.pool}</span>. Private payments are open.
               </Notice>
+            ) : deployment ? (
+              <Notice tone="warn" title="Deployed, not yet open">
+                The pool is deployed on {activeChain.name} at{" "}
+                <span className="mono">{deployment.pool}</span>, and a real Groth16 proof verifies against
+                its verifier. The deposit and withdrawal flow a user would drive is still being built, so
+                CloakPay does not offer a private payment today. Rather than quietly sending a public
+                transfer and calling it private, the option is switched off and says so. The steps below
+                describe the design as implemented.
+              </Notice>
             ) : (
               <Notice tone="warn" title="Built, tested, not yet deployed">
                 The circuit compiles, the contract passes its tests, and a real Groth16 proof verifies
-                against the deployed verifier in the test suite. No deployment has been recorded for{" "}
+                against a deployed verifier in the test suite. No deployment has been recorded for{" "}
                 {activeChain.name} yet, so CloakPay does not offer a private payment today. Rather than
                 quietly sending a public transfer and calling it private, the option is switched off and
                 says so. The steps below describe the design as implemented.

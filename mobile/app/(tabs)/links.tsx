@@ -138,8 +138,8 @@ export default function Links() {
           </Pressable>
           <Button title="Create link" loading={creating} onPress={create} style={{ marginTop: space.lg }} />
           <Text style={styles.hint}>
-            Links can only request a direct transfer until the shielded pool is deployed, and the payer is
-            told exactly that.
+            Links can only request a direct transfer until the shielded pool has a deposit and withdrawal
+            flow, and the payer is told exactly that.
           </Text>
         </Card>
 

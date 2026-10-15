@@ -109,7 +109,8 @@ Listing these is more useful than pretending otherwise.
 - Quantum adversaries. Every primitive here is broken by a sufficiently large
   quantum computer.
 - Anything above testnet stakes. The trusted setup is single-party, the code is
-  unaudited, and the contracts are not deployed.
+  unaudited, and the contracts are deployed to testnet only with no user-facing
+  deposit or withdrawal flow.
 
 ## Pre-launch requirements
 

@@ -87,10 +87,12 @@ to complete.
 
 ## Privacy behaviour on mobile
 
-The mobile client reads pool state from `/api/pool`. While `pool.deployed` is
-false the app offers a public transfer under a Public label and says in plain
-words why the private option is unavailable. It never presents a visible transfer
-as a private one.
+The mobile client reads pool state from `/api/pool`, and gates every privacy
+label on `pool.privateReady` rather than `pool.deployed`: a contract address on
+chain is not yet a private payment, because the deposit and withdrawal flow that
+spends a note is still being built. While `privateReady` is false the app offers
+a public transfer under a Public label and says in plain words why the private
+option is unavailable. It never presents a visible transfer as a private one.
 
 ## Build
 

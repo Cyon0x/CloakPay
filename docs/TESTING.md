@@ -9,7 +9,22 @@ npm run test:unit        # protocol: Merkle tree and note format
 npm run test:contracts   # Foundry: pool, tree, and a real Groth16 proof
 npm run build            # production build
 npm run chain:check      # live network assertions against Elysium testnet
+npm run chain:verify     # every recorded contract address, read back over RPC
+npm run chain:fork-test  # the deployed pool, on a fork, with a real proof
 ```
+
+Two checks need a running server and a real database, and both delete the
+fixtures they create:
+
+```bash
+APP_URL=http://localhost:3200 npm run username:check   # registration, end to end
+APP_URL=http://localhost:3200 npm run privacy:check    # the two payment paths
+```
+
+`privacy:check` is the guard on the private/public split: a private payment is
+refused while its flow is unbuilt, an address cannot be smuggled into the
+private path, a private link cannot be settled as a public transfer, a refused
+attempt does not spend the link's use, and an external transfer still opens.
 
 The unit-test runner uses `node --import tsx --test --test-isolation=none`
 rather than the `tsx` CLI, because the CLI's IPC socket is not permitted in a
@@ -29,6 +44,15 @@ secrets never repeat; the amount comes from the denomination and not from user
 input; unknown denominations are refused; encode/decode round-trips; malformed
 notes are rejected instead of half-parsed; a tampered note fails its commitment
 comparison.
+
+### Input parsing, `tests/unit/`
+
+17 tests over the two pieces that decide what a payment is allowed to be.
+`amount.ts` refuses zero, negative, malformed and over-precise values rather
+than rounding them, converts decimal strings to wei without touching a float,
+and round-trips; `address.ts` rejects anything that is not 40 hex characters,
+catches a bad EIP-55 checksum, and refuses the zero address and the sender's
+own address.
 
 ### Contracts, `contracts/test/`
 
@@ -57,10 +81,15 @@ They are regenerated with `npm run zk:prove-fixtures`.
 
 ## What is not covered, and why that matters
 
-**No test claims a live private payment works end to end**, because the pool is
-not deployed. What is proven is that the circuit is correct, the artifacts match
-each other, and the contract accepts a genuine proof and rejects a bad one in an
-EVM. The step that is missing is a deployment, not a test.
+**No test claims a live private payment works end to end.** The verifier, the
+Poseidon library and the pool are deployed to Elysium testnet, and
+`npm run chain:verify` re-reads every recorded address over RPC while
+`npm run chain:fork-test` runs the deployed pool on a fork with a real Groth16
+proof: a deposit and withdrawal settle, and a reused nullifier, tampered public
+signals, an unknown root, a wrong deposit amount and an unknown denomination are
+all refused. What is still missing is the deposit and withdrawal flow a user
+would drive in the browser, so no test drives a private payment from the UI, and
+no deposit has been made from a real funded account.
 
 **The OAuth flow has no automated test.** It needs registered redirect URIs and a
 provider account. `src/lib/auth/oauth.ts` is written so the parts that can be

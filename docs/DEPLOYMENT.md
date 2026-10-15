@@ -145,5 +145,10 @@ enabled for a real origin rather than a localhost one.
 - A direct transfer confirms, and its receipt links to the right explorer
   transaction.
 - A payment link opens from a signed-out browser and asks for sign-in first.
-- `/api/pool` reports `deployed: false` while no deployment is recorded. If it
-  reports `true` without a real address, something is wrong.
+- `/api/pool` reports the deployment that `src/config/pool-deployments.json`
+  records, and `privateReady` stays `false` until the deposit and withdrawal
+  flow exists. A `deployed: true` without a real address means something is
+  wrong; so does a `privateReady: true` while no flow can spend a note.
+- `npm run chain:verify` re-reads every recorded address over RPC and
+  `npm run chain:fork-test` exercises the deployed pool on a fork. Run both
+  after any deployment.

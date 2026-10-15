@@ -45,11 +45,15 @@ icon and favicon from the supplied master artwork, and one design token set in
 ## Partial
 
 **Shielded payments.** The cryptography, the contracts and the client proving
-pipeline are complete and tested. The pool is not deployed, because deploying
-needs testnet HYPE in a deployer account and the faucet is a browser page behind
-a CAPTCHA. Everything that would otherwise offer a private payment is switched
-off and says why, and the API refuses with `privacy_unavailable` rather than
-falling back to a public transfer.
+pipeline are complete and tested, and the verifier, the Poseidon library and the
+pool are deployed to Elysium testnet (`src/config/pool-deployments.json`) with
+`npm run chain:verify` re-reading every recorded address over RPC and
+`npm run chain:fork-test` exercising the deployed pool on a fork with real
+proofs. What is still missing is the deposit and withdrawal flow a user would
+drive from the browser, so `SHIELDED_CLIENT_READY` stays false. Everything that
+would otherwise offer a private payment is switched off and says why, and the
+API refuses with `privacy_unavailable` rather than falling back to a public
+transfer.
 
 **Trusted setup.** Functional, but single-party and development-only. See
 [PRIVACY_PROTOCOL.md](PRIVACY_PROTOCOL.md#trusted-setup). This must be replaced
@@ -87,5 +91,6 @@ on the settings screen controls in-app alerts only.
   is the right choice and is not available through WebCrypto without a
   dependency.
 - **Indexer.** `pool_events` and `pool_state` exist in the schema. Nothing
-  populates them yet, because there is no deployment to index.
+  populates them yet, because the deposit and withdrawal flow that would emit
+  the events is not built.
 - **Audit.** None has taken place.

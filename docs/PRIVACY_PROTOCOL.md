@@ -122,9 +122,10 @@ denomination set.
 three public Powers of Tau mirrors were unreachable from the build machine.
 
 A single-party Groth16 setup means whoever ran it could, in principle, forge a
-proof for a false statement. That is acceptable while no value is at stake and
-the pool is not deployed. **It is not acceptable for a public launch.** Before
-any deployment that holds value, the ceremony must be replaced with a
+proof for a false statement. That is acceptable only while no value is at stake,
+which is the case today: the pool has no user-facing deposit or withdrawal flow
+and holds nothing. **It is not acceptable for a public launch.** Before any
+deployment that holds value, the ceremony must be replaced with a
 multi-party one, the new verifier regenerated, and the whole thing re-tested.
 
 Nothing in the application claims otherwise, and the deployment script records
