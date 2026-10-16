@@ -119,12 +119,18 @@ const POOL_ABI = [
   },
 ];
 
+/** Enough for the payer's deposit and both signatures, and for the payee's withdrawal. */
+const FUND_PAYER = 20_000_000_000_000_000n; // 0.02
+const FUND_PAYEE = 5_000_000_000_000_000n; // 0.005
+
 const tag = randomBytes(3).toString("hex");
 const payerUsername = `e2epayer${tag}`;
 const payeeUsername = `e2epayee${tag}`;
 
 let payerRow = null;
 let payeeRow = null;
+let payer = null;
+let payee = null;
 
 /* ── the harness the browser gets for free ─────────────────────────────────── */
 
@@ -181,6 +187,33 @@ async function createIdentity(username) {
   return { ...user, address, secret, token };
 }
 
+/**
+ * Returns what a throwaway test wallet has left to the wallet that funded it.
+ *
+ * The mnemonics here are generated per run and never written down, so anything
+ * left behind is gone for good. An earlier version of this script did exactly
+ * that and quietly drained the deployment wallet, which is what stopped the
+ * suite from being re-runnable. A gas reserve stays behind so the sweep itself
+ * can pay for its own transaction.
+ */
+async function sweep(identity) {
+  const account = mnemonicToAccount(identity.secret.mnemonic);
+  const balance = await publicClient.getBalance({ address: account.address });
+  const gasPrice = await publicClient.getGasPrice();
+  const reserve = gasPrice * 21_000n * 2n;
+  if (balance <= reserve) return null;
+  const client = createWalletClient({
+    account,
+    transport: http(activeChain.rpcUrl, { timeout: 30_000 }),
+  });
+  const hash = await client.sendTransaction({
+    to: privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY).address,
+    value: balance - reserve,
+  });
+  await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+  return hash;
+}
+
 /** Sends testnet HYPE from the deployment wallet so the test can pay gas. */
 async function fund(address, amount) {
   const account = privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY);
@@ -217,9 +250,9 @@ try {
   );
 
   /* ── 1. two identities ──────────────────────────────────────────────────── */
-  const payer = await createIdentity(payerUsername);
+  payer = await createIdentity(payerUsername);
   payerRow = payer;
-  const payee = await createIdentity(payeeUsername);
+  payee = await createIdentity(payeeUsername);
   payeeRow = payee;
   record(
     "two test identities with viewing keys exist",
@@ -227,8 +260,26 @@ try {
     `@${payer.username} ${payer.address} · @${payee.username} ${payee.address}`,
   );
 
-  const fundPayer = await fund(payer.address, 20_000_000_000_000_000n); // 0.02
-  const fundPayee = await fund(payee.address, 5_000_000_000_000_000n); // 0.005
+  // Say plainly when the deployment wallet cannot bankroll the run, rather
+  // than surfacing a raw "exceeds the balance of the account" from viem.
+  const deployerAddress = privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY).address;
+  const deployerBalance = await publicClient.getBalance({ address: deployerAddress });
+  const required = FUND_PAYER + FUND_PAYEE + denomination.wei;
+  record(
+    "the deployment wallet can bankroll the run",
+    deployerBalance >= required,
+    `deployer ${deployerAddress} holds ${wei(deployerBalance)}, needs at least ${wei(required)}`,
+  );
+
+  if (deployerBalance < required) {
+    throw new Error(
+      `The deployment wallet holds ${wei(deployerBalance)} and this run needs ${wei(required)} up front. ` +
+        "Fund it from the Elysium testnet faucet and run again.",
+    );
+  }
+
+  const fundPayer = await fund(payer.address, FUND_PAYER);
+  const fundPayee = await fund(payee.address, FUND_PAYEE);
   const payerStart = await publicClient.getBalance({ address: payer.address });
   const payeeStart = await publicClient.getBalance({ address: payee.address });
   record(
@@ -400,6 +451,18 @@ try {
 } catch (error) {
   record("the end-to-end flow ran without throwing", false, String(error?.stack ?? error));
 } finally {
+  // What is left in the throwaway wallets goes back to the deployment wallet
+  // before anything else: those keys are discarded at the end of this process.
+  for (const identity of [payer, payee]) {
+    if (!identity) continue;
+    try {
+      const hash = await sweep(identity);
+      if (hash) console.log(`\nReturned the unused balance of ${identity.address} to the deployer (${hash.slice(0, 12)}…).`);
+    } catch (sweepError) {
+      console.error(`could not return the balance of ${identity.address}:`, sweepError.message);
+    }
+  }
+
   // The fixture accounts go; the on-chain evidence stays.
   try {
     if (payerRow) await sql`delete from payments where from_user_id = ${payerRow.id} or to_user_id = ${payerRow.id}`;

@@ -13,7 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { createPublicClient, http, parseAbi } from "viem";
+import { createPublicClient, http, parseAbi, parseAbiItem } from "viem";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const deploymentsFile = path.join(root, "src", "config", "pool-deployments.json");
@@ -47,6 +47,14 @@ const POOL_ABI = parseAbi([
 // than trusted, so a drift between the three is a failed check, not a surprise.
 const expectedDenoms = [10000000000000000n, 100000000000000000n, 1000000000000000000n];
 const expectedDepth = 20;
+
+// Read back for reconciliation below; the same declarations the contract uses.
+const DEPOSIT_EVENT = parseAbiItem(
+  "event Deposit(uint256 indexed denominationIndex, uint256 denomination, uint256 commitment, uint32 leafIndex)",
+);
+const WITHDRAWAL_EVENT = parseAbiItem(
+  "event Withdrawal(uint256 indexed denominationIndex, uint256 nullifierHash, address recipient, address relayer, uint256 fee)",
+);
 
 for (const [chainId, record] of entries) {
   console.log(`\nchain ${chainId}`);
@@ -111,7 +119,24 @@ for (const [chainId, record] of entries) {
   for (let index = 0; index < denoms.length; index++) {
     balances.push(await client.readContract({ address: pool, abi: POOL_ABI, functionName: "pooledBalance", args: [BigInt(index)] }));
   }
-  check("every denomination tree starts empty", balances.every((value) => value === 0n), JSON.stringify(balances.map(String)));
+  // The pool's own accounting has to reconcile with the events the chain
+  // recorded: a deposit adds its denomination, a withdrawal removes a whole
+  // one. Asserting an empty pool would only ever be true once, and would turn
+  // a pool that is being used -- the interesting case -- into a failure.
+  const [deposits, withdrawals] = await Promise.all([
+    client.getLogs({ address: pool, event: DEPOSIT_EVENT, fromBlock: BigInt(record.deployBlock), toBlock: "latest" }),
+    client.getLogs({ address: pool, event: WITHDRAWAL_EVENT, fromBlock: BigInt(record.deployBlock), toBlock: "latest" }),
+  ]);
+  const fromEvents = denoms.map(() => 0n);
+  for (const log of deposits) fromEvents[Number(log.args.denominationIndex)] += log.args.denomination;
+  // `Withdrawal` carries no amount: a withdrawal always releases exactly one
+  // whole denomination, so the value comes from the table, not the log.
+  for (const log of withdrawals) fromEvents[Number(log.args.denominationIndex)] -= denoms[Number(log.args.denominationIndex)];
+  check(
+    "the pool's balance reconciles with the deposits and withdrawals the chain recorded",
+    JSON.stringify(balances.map(String)) === JSON.stringify(fromEvents.map(String)),
+    `pooled=${JSON.stringify(balances.map(String))} events=${JSON.stringify(fromEvents.map(String))} (${deposits.length} deposits, ${withdrawals.length} withdrawals)`,
+  );
 
   for (const tx of record.transactions ?? []) {
     const receipt = await client.getTransactionReceipt({ hash: tx.txHash });
