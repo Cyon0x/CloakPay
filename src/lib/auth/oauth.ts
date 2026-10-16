@@ -62,7 +62,9 @@ const PROVIDERS: Record<ProviderId, ProviderDefinition> = {
       const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
         headers: { authorization: `Bearer ${accessToken}` },
       });
-      if (!response.ok) throw new Error("google_userinfo_failed");
+      if (!response.ok) {
+        throw new Error(`google_userinfo_failed:${response.status}:${await describeProviderError(response)}`);
+      }
       const body = (await response.json()) as {
         sub: string;
         email?: string;
@@ -91,7 +93,9 @@ const PROVIDERS: Record<ProviderId, ProviderDefinition> = {
         "https://api.x.com/2/users/me?user.fields=profile_image_url,name,username",
         { headers: { authorization: `Bearer ${accessToken}` } },
       );
-      if (!response.ok) throw new Error("x_userinfo_failed");
+      if (!response.ok) {
+        throw new Error(`x_userinfo_failed:${response.status}:${await describeProviderError(response)}`);
+      }
       const body = (await response.json()) as {
         data: { id: string; name?: string; username?: string; profile_image_url?: string };
       };
@@ -113,6 +117,33 @@ export function getProvider(id: string): ProviderDefinition {
 
 export function redirectUri(provider: ProviderId): string {
   return `${env.appUrl}/api/auth/${provider}/callback`;
+}
+
+/**
+ * The provider's own words for a rejected request.
+ *
+ * `!response.ok` on its own is not a diagnosis: the same endpoint answers 200
+ * for a good user token, 401 for a bad one, 403 when the token is missing a
+ * scope, and 402 when the app is out of credits, and those want four different
+ * fixes. X explains which in `title`/`detail`, so keep that, trimmed, and never
+ * the request itself.
+ */
+async function describeProviderError(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    const parsed = JSON.parse(text) as {
+      title?: string;
+      detail?: string;
+      error?: string;
+      error_description?: string;
+    };
+    const said = [parsed.title, parsed.detail ?? parsed.error_description ?? parsed.error]
+      .filter(Boolean)
+      .join(" - ");
+    return (said || text).replace(/\s+/g, " ").trim().slice(0, 200);
+  } catch {
+    return "no readable body";
+  }
 }
 
 function base64url(buffer: Buffer): string {
