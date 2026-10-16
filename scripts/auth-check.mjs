@@ -179,7 +179,75 @@ async function checkSecret(provider, creds) {
   return record(provider, false, `Unexpected answer from the token endpoint: ${response.status} ${error}`);
 }
 
-console.log(`Checking OAuth configuration for ${appUrl}\n`);
+/** The exact strings that must be registered with each provider. */
+function callbackUri(provider) {
+  return `${appUrl}/api/auth/${provider}/callback`;
+}
+
+/**
+ * Reports handshakes that were started but never came back.
+ *
+ * A provider that refuses to redirect -- which is what an unregistered callback
+ * URI looks like from here -- leaves its `oauth_states` row untouched and shows
+ * the user a page the server never sees. For X this is the *only* failure mode
+ * the token check below cannot detect: the client id and secret can be perfect
+ * while the sign-in still cannot complete. Reading the leftover rows turns that
+ * silence into a sentence naming the URI to register.
+ */
+async function reportUnfinishedHandshakes() {
+  const url = env.DATABASE_URL;
+  if (!url) {
+    record("--", null, "No DATABASE_URL, so unfinished sign-in attempts cannot be inspected.");
+    return;
+  }
+
+  let sql;
+  try {
+    const { default: postgres } = await import("postgres");
+    sql = postgres(url, {
+      ssl: url.includes("sslmode=require") ? "require" : undefined,
+      max: 1,
+      onnotice: () => {},
+    });
+    // A row that is still here within its ten-minute life was never consumed,
+    // so the provider never sent the user back.
+    const rows = await sql`
+      select provider, redirect_uri, count(*)::int as attempts
+      from oauth_states
+      where expires_at > now()
+      group by provider, redirect_uri
+      order by attempts desc
+    `;
+
+    if (rows.length === 0) {
+      record("--", null, "Every recent sign-in attempt came back. Nothing is stuck at a provider.");
+      return;
+    }
+
+    for (const row of rows) {
+      // This is a real failure, not an observation: the rows exist because the
+      // provider never sent the user back, and it counts toward the exit code.
+      record(
+        row.provider,
+        false,
+        `${row.attempts} sign-in attempt${row.attempts === 1 ? "" : "s"} started but never came back. ` +
+          "The provider did not redirect to CloakPay, which is what an unregistered callback URI " +
+          "looks like from this side. Register this exact value in the " +
+          `${row.provider === "x" ? "X app's User authentication settings" : "Google console"}: ` +
+          `${row.redirect_uri} -- X requires an exact match, and the form must be saved before ` +
+          "OAuth 2.0 is enabled for the app.",
+      );
+    }
+  } catch (error) {
+    record("--", null, `Could not read unfinished attempts: ${error.message}`);
+  } finally {
+    await sql?.end();
+  }
+}
+
+console.log(`Checking OAuth configuration for ${appUrl}`);
+console.log(`  Google callback: ${callbackUri("google")}`);
+console.log(`  X callback:      ${callbackUri("x")}\n`);
 
 const google = presence("google");
 if (google) {
@@ -193,6 +261,8 @@ if (x) {
   await checkSecret("x", x);
 }
 
+await reportUnfinishedHandshakes();
+
 const width = Math.max(...results.map((r) => r.provider.length));
 for (const result of results) {
   const label = result.ok === true ? "PASS" : result.ok === false ? "FAIL" : "INFO";
@@ -203,6 +273,6 @@ const failures = results.filter((r) => r.ok === false).length;
 const checks = results.filter((r) => r.ok !== null).length;
 console.log(`\n${checks - failures} passed, ${failures} failed.`);
 if (failures) {
-  console.log("Sign-in is disabled for any provider that failed. The sign-in page says so too.");
+  console.log("Sign-in is disabled on the sign-in page when a provider has no credentials at all.");
 }
 process.exit(failures ? 1 : 0);
