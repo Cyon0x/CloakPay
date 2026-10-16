@@ -20,7 +20,7 @@ fixtures they create:
 ```bash
 APP_URL=http://localhost:3200 npm run username:check   # registration, end to end
 APP_URL=http://localhost:3200 npm run privacy:check    # the two payment paths
-APP_URL=http://localhost:3200 npm run nav:check        # the nav drawer, in a browser
+APP_URL=http://localhost:3200 npm run nav:check        # the nav drawer and signed-in routing
 APP_URL=http://localhost:3200 NEXT_PUBLIC_ZK_PATH=$PWD/public/zk npm run e2e:shielded
 ```
 
@@ -63,6 +63,15 @@ containing block for `position: fixed` descendants, so the drawer and its scrim
 were sized to the 60px header instead of the viewport. The menu opened,
 reported `aria-expanded="true"` and rendered its items -- inside a sliver. It
 skips itself when no Chrome or no server is available.
+
+The same browser session then checks where the session sends people. Signed in,
+the header's brand link points at `/dashboard`, following it lands there from
+another page, the landing page redirects to `/dashboard`, and the public pages
+that stay useful while signed in (`how-it-works`, `security`, `faq`, `terms`)
+still answer 200 rather than being swallowed by the guard. Signing out is done
+through the real route, and an app page is fetched afterwards to show the
+session row is revoked rather than only the cookie cleared. Finally the
+signed-out visitor keeps `/` with a brand link that points back at it.
 
 The unit-test runner uses `node --import tsx --test --test-isolation=none`
 rather than the `tsx` CLI, because the CLI's IPC socket is not permitted in a

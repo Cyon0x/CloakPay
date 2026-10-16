@@ -142,7 +142,10 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
   return (
     <header className="topbar">
       <div className="shell topbar-inner">
-        <BrandLink markSize={26} />
+        {/* Signed in, the brand is the way back to the app home. Signed out, it
+            is the way back to the landing page. Both are the same component so
+            the two headers cannot drift apart. */}
+        <BrandLink href={user ? "/dashboard" : "/"} markSize={26} />
 
         {user ? (
           <nav className="topbar-nav" aria-label="Primary">

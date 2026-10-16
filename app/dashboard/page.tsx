@@ -4,7 +4,7 @@ import { WalletSummary } from "@/components/WalletSummary";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain } from "@/config/chain";
 import { poolStatusSentence } from "@/config/pool";
@@ -19,8 +19,7 @@ export const dynamic = "force-dynamic";
  * that are not in play yet.
  */
 export default async function DashboardPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
   const sql = db();
 
   const [wallet] = await sql<{ address: string }[]>`

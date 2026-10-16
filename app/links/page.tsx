@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { LinkActions } from "@/components/LinkActions";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
 import { formatWei } from "@/lib/format";
 
@@ -12,8 +12,7 @@ export const metadata = { title: "Payment links" };
 export const dynamic = "force-dynamic";
 
 export default async function LinksPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
 
   const links = await db()<
     {

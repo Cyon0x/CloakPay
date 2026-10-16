@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { db } from "@/lib/db";
+import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { explorerTx } from "@/config/chain";
 
@@ -9,8 +10,7 @@ export const metadata = { title: "Activity" };
 export const dynamic = "force-dynamic";
 
 export default async function ActivityPage() {
-  const user = await import("@/lib/session").then((m) => m.currentUser());
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
 
   const rows = await db()<
     {

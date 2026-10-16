@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { TopBar } from "@/components/Nav";
 import { Mark } from "@/components/Brand";
 import { Icon } from "@/components/Icon";
@@ -52,6 +53,13 @@ const STEPS = [
 
 export default async function LandingPage() {
   const user = await currentUser();
+  // Someone who is already signed in belongs in the app. This page's calls to
+  // action are "Sign in" and "Create account", which are the wrong thing to
+  // show them, and its header would have to render a signed-in nav anyway. The
+  // public pages that remain useful while signed in -- how it works, privacy,
+  // FAQ, terms -- are deliberately not redirected.
+  if (user) redirect("/dashboard");
+
   const pool = poolStatus(activeChain.chainId);
   const poolLive = pool === "ready";
 

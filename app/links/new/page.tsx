@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { PageHeader } from "@/components/ui";
 import { LinkComposer } from "@/components/LinkComposer";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
 import { DENOMINATIONS, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 import { activeChain } from "@/config/chain";
@@ -11,8 +11,7 @@ export const metadata = { title: "New payment link" };
 export const dynamic = "force-dynamic";
 
 export default async function NewLinkPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
 
   return (
     <AuthedShell>

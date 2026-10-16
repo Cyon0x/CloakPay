@@ -159,14 +159,22 @@ export function Lockup({
 }
 
 export function BrandLink({
+  href = "/",
   tone = "auto",
   markSize = 28,
 }: {
+  /**
+   * Where the lockup goes. The public pages point it at the landing page; the
+   * signed-in chrome points it at the app home, so a click from inside the app
+   * cannot drop the user back on the marketing page, which offers Sign in and
+   * Create account to someone who is already signed in.
+   */
+  href?: string;
   tone?: BrandTone;
   markSize?: number;
 }) {
   return (
-    <Link href="/" className="brand-link" aria-label="CloakPay home">
+    <Link href={href} className="brand-link" aria-label="CloakPay home">
       <Lockup markSize={markSize} tone={tone} />
     </Link>
   );

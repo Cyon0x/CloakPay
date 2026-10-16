@@ -261,6 +261,95 @@ try {
     record("clicking the scrim closes it", out.scrimClickCloses === true);
   }
 
+  // The brand link and the landing-page guard read the same session the drawer
+  // does, so they are checked once, in the same signed-in browser. These are the
+  // two ways a signed-in user was being sent back to the marketing page: the
+  // logo's own href, and the page it pointed at.
+  console.log("\nsigned-in routing");
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 1280, height: 900, deviceScaleFactor: 1, mobile: false,
+  });
+
+  const evaluate = async (expression) => {
+    const response = await send("Runtime.evaluate", { awaitPromise: true, returnByValue: true, expression });
+    return response.result?.result?.value ?? {};
+  };
+  const visit = async (path, settle = 1800) => {
+    await send("Page.navigate", { url: `${appUrl}${path}` });
+    await sleep(settle);
+  };
+
+  await visit("/send");
+  const brand = await evaluate(
+    `({ path: location.pathname, href: document.querySelector('.brand-link')?.getAttribute('href') })`,
+  );
+  record(
+    "a signed-in header points the brand at the app home",
+    brand.href === "/dashboard",
+    `href=${brand.href} while on ${brand.path}`,
+  );
+
+  const afterClick = await evaluate(`(async () => {
+    document.querySelector('.brand-link')?.click();
+    await new Promise((r) => setTimeout(r, 1500));
+    return { path: location.pathname };
+  })()`);
+  record(
+    "clicking the brand from another page lands on the dashboard",
+    afterClick.path === "/dashboard",
+    `ended on ${afterClick.path}`,
+  );
+
+  await visit("/");
+  const guarded = await evaluate(`({ path: location.pathname })`);
+  record(
+    "the landing page sends a signed-in visitor into the app",
+    guarded.path === "/dashboard",
+    `ended on ${guarded.path}`,
+  );
+
+  // Public pages are the ones that should stay readable to a signed-in user, so
+  // the guard above must not have been written broadly enough to swallow them.
+  const publicPages = await evaluate(`(async () => {
+    const out = {};
+    for (const path of ['/how-it-works', '/security', '/faq', '/terms']) {
+      const response = await fetch(path);
+      out[path] = [response.status, response.redirected, new URL(response.url).pathname].join(' ');
+    }
+    return out;
+  })()`);
+  record(
+    "the public pages stay reachable while signed in",
+    Object.entries(publicPages).every(([path, said]) => said === `200 false ${path}`),
+    JSON.stringify(publicPages),
+  );
+
+  console.log("\nsigned-out routing");
+  // Log out the way the drawer does -- a same-origin POST to the sign-out route
+  // -- rather than by throwing the cookie away, so revocation itself is
+  // exercised. An app page is then re-requested: if sign-out had only cleared
+  // the cookie and left the session row alive, it would still render.
+  const signedOut = await evaluate(`(async () => {
+    const response = await fetch('/api/auth/signout', { method: 'POST' });
+    const guarded = await fetch('/send');
+    return {
+      signout: response.status,
+      appPage: [guarded.status, new URL(guarded.url).pathname].join(' '),
+    };
+  })()`);
+  record(
+    "logging out revokes the session, not only the cookie",
+    signedOut.signout === 200 && signedOut.appPage === "200 /signin",
+    JSON.stringify(signedOut),
+  );
+
+  await visit("/");
+  const anonymous = await evaluate(
+    `({ path: location.pathname, href: document.querySelector('.brand-link')?.getAttribute('href') })`,
+  );
+  record("a signed-out visitor keeps the landing page", anonymous.path === "/", `landed on ${anonymous.path}`);
+  record("and its brand points back at the landing page", anonymous.href === "/", `href=${anonymous.href}`);
+
   socket.close();
 } catch (error) {
   record("the check ran", false, error.message);

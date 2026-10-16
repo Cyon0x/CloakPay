@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { db } from "./db";
 import { env } from "./env";
 
@@ -125,5 +126,20 @@ export async function currentUser(): Promise<SessionUser | null> {
 export async function requireUser(): Promise<SessionUser> {
   const user = await currentUser();
   if (!user) throw new Error("UNAUTHENTICATED");
+  return user;
+}
+
+/**
+ * The current session, or a redirect to sign-in.
+ *
+ * App pages start with this rather than `currentUser()`. Returning early on a
+ * null used to answer an expired or missing session with a 200 and an empty
+ * page: no chrome, no guard, no explanation, and no way to tell it apart from a
+ * broken page. An expired session is a signed-out visitor, so it is sent to the
+ * same place `AuthedShell` sends one.
+ */
+export async function currentUserOrRedirect(): Promise<SessionUser> {
+  const user = await currentUser();
+  if (!user) redirect("/signin?error=session_expired");
   return user;
 }

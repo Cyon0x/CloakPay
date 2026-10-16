@@ -3,7 +3,7 @@ import { WalletAddressCard } from "@/components/WalletAddressCard";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { activeChain, explorerAddress } from "@/config/chain";
 
 export const metadata = { title: "Faucet" };
@@ -25,8 +25,7 @@ const STEPS = [
  * address and show the real balance so the result can be seen.
  */
 export default async function FaucetPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
 
   const [wallet] = await db()<{ address: string }[]>`
     select address from wallets where user_id = ${user.userId}

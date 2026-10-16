@@ -3,7 +3,7 @@ import { AuthedShell } from "@/components/AuthedShell";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain, explorerTx } from "@/config/chain";
 import { poolStatus } from "@/config/pool";
@@ -19,8 +19,7 @@ export const dynamic = "force-dynamic";
  * page can be checked against the explorer rather than taken on trust.
  */
 export default async function TransactionsPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
 
   const rows = await db()<
     {

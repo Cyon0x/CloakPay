@@ -4,7 +4,7 @@ import { QrCode } from "@/components/QrCode";
 import { CopyField } from "@/components/CopyField";
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
 import { activeChain, explorerAddress } from "@/config/chain";
 import { poolStatus, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
@@ -13,8 +13,7 @@ export const metadata = { title: "Receive" };
 export const dynamic = "force-dynamic";
 
 export default async function ReceivePage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
   const rows = await db()<{ address: string; viewing_key_id: string | null }[]>`
     select address, viewing_key_id from wallets where user_id = ${user.userId}
   `;

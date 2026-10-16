@@ -76,6 +76,23 @@ Account linking is deliberately manual. Two identities are only joined when a
 signed-in user connects the second provider from Settings; similar-looking
 usernames or emails are never merged automatically.
 
+### Signed-in routing
+
+There is no middleware and no client-side auth store, so nothing can decide that
+a user is signed out while a session check is still in flight: every page reads
+the session on the server and renders the result. `AuthedShell` guards the app,
+and pages that read the session themselves start with `currentUserOrRedirect()`
+for the same reason — an expired session is a signed-out visitor and goes to
+sign-in rather than rendering an empty page.
+
+- The header lockup (`BrandLink`) follows the session: `/` for a visitor, and
+  `/dashboard` once signed in, so the logo never drops an authenticated user on
+  the landing page.
+- The landing page is for signed-out visitors and redirects an authenticated
+  one to `/dashboard`. The public pages that stay useful while signed in — how
+  it works, privacy, FAQ, terms — are deliberately not guarded.
+- Sign-out revokes the session row, clears the cookie, and returns to `/`.
+
 ## Wallets
 
 CloakPay is **self-custodial**. A twelve-word BIP-39 mnemonic is generated in

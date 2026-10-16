@@ -2,7 +2,7 @@ import { AuthedShell } from "@/components/AuthedShell";
 import { PageHeader } from "@/components/ui";
 import { SendForm } from "@/components/SendForm";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { activeChain } from "@/config/chain";
 import { DENOMINATIONS, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 
@@ -14,8 +14,7 @@ export default async function SendPage({
 }: {
   searchParams: Promise<{ to?: string }>;
 }) {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
   const { to } = await searchParams;
 
   const [wallet] = await db()<{ address: string }[]>`

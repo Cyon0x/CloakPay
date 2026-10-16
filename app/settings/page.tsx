@@ -3,7 +3,7 @@ import { AuthedShell } from "@/components/AuthedShell";
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { listIdentities } from "@/lib/auth/accounts";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { currentUserOrRedirect } from "@/lib/session";
 import { explorerAddress } from "@/config/chain";
 import { formatWei } from "@/lib/payments";
 
@@ -11,8 +11,7 @@ export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = await currentUser();
-  if (!user) return null;
+  const user = await currentUserOrRedirect();
   const identities = await listIdentities(user.userId);
   const [wallet] = await db()<{ address: string; viewing_key_id: string | null }[]>`
     select address, viewing_key_id from wallets where user_id = ${user.userId}
