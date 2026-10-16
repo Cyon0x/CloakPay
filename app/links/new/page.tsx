@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/ui";
 import { LinkComposer } from "@/components/LinkComposer";
 import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
-import { poolStatusSentence } from "@/config/pool";
 import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "New payment link" };
@@ -25,7 +24,6 @@ export default async function NewLinkPage() {
         }
       />
       <LinkComposer
-        poolSentence={poolStatusSentence(activeChain.chainId)}
         symbol={activeChain.nativeToken.symbol}
         decimals={activeChain.nativeToken.decimals}
         appUrl={env.appUrl}

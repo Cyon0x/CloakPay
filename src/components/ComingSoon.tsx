@@ -14,20 +14,21 @@ import { Icon } from "./Icon";
  * The point of a component rather than a one-off is consistency — the same
  * words and the same shape wherever a paused path is mentioned, so two screens
  * cannot tell the user two different stories about the same feature.
+ *
+ * One line of body text, and nothing more: a user needs to know the feature is
+ * not here yet. Why it is off, what the code behind it is doing, and when it
+ * might return are all things that belong to the people building it.
  */
 export function ComingSoon({
   title,
   icon = "lock",
   body,
-  note,
   children,
 }: {
   title: string;
   icon?: string;
   /** One or two sentences: what the feature is, and that it is not available. */
   body: string;
-  /** What happens to the work behind it, so nothing reads as deleted. */
-  note?: string;
   children?: ReactNode;
 }) {
   return (
@@ -47,11 +48,6 @@ export function ComingSoon({
           <p className="tiny muted" style={{ marginTop: 6, maxWidth: "62ch" }}>
             {body}
           </p>
-          {note ? (
-            <p className="tiny muted" style={{ marginTop: 6, maxWidth: "62ch" }}>
-              {note}
-            </p>
-          ) : null}
           {children}
         </div>
       </div>

@@ -9,7 +9,6 @@ import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
 import { activeChain } from "@/config/chain";
-import { poolStatusSentence } from "@/config/pool";
 
 export const metadata = { title: "Receive" };
 export const dynamic = "force-dynamic";
@@ -20,13 +19,13 @@ export const dynamic = "force-dynamic";
  * Two ways in, and this is the only screen in CloakPay that prints either of
  * them:
  *
- *   * the username, which is how another CloakPay user pays you. Nothing else
- *     is needed, and no address is exchanged.
+ *   * the username, which is how another CloakPay user pays you.
  *   * the wallet address, and only so funds from an external wallet can land in
- *     this account. Nothing else in the product shows an address — not the
- *     dashboard, not settings, not a receipt — because paying by username is
- *     the whole payment experience. It is labelled for what it is for, so
- *     nobody reads it as the way to pay someone.
+ *     this account. It is labelled for what it is for, so nobody reads it as
+ *     the way to pay someone.
+ *
+ * Each value gets its own copy button, because copying is the only thing
+ * anybody does with either one.
  */
 export default async function ReceivePage() {
   const user = await currentUserOrRedirect();
@@ -42,7 +41,7 @@ export default async function ReceivePage() {
       <>
         <PageHeader
           title="Receive"
-          subtitle="Share your username and people pay you inside CloakPay. No address changes hands, in either direction."
+          subtitle="Share your username to get paid by other CloakPay users."
         />
 
         <div className="split">
@@ -56,8 +55,8 @@ export default async function ReceivePage() {
                 <CopyButton value={username} label="the username" />
               </div>
               <p className="tiny muted" style={{ marginTop: 10 }}>
-                Another CloakPay user types this on their Send page. It resolves to this account, which is why
-                a payment needs nothing else.
+                You are paid at this username. It is the only thing another CloakPay user needs to send you
+                money.
               </p>
 
               <div style={{ marginTop: 22, paddingTop: 20, borderTop: "1px solid var(--color-line-soft)" }}>
@@ -65,7 +64,7 @@ export default async function ReceivePage() {
                 <div style={{ marginTop: 20, textAlign: "center" }}>
                   <QrCode value={identity} />
                   <p className="tiny muted" style={{ marginTop: 10 }}>
-                    Anyone scanning this is taken to your page signed in as themselves, and pays by username.
+                    Scanning opens your page, pre-filled with you as the recipient.
                   </p>
                 </div>
               </div>
@@ -89,9 +88,7 @@ export default async function ReceivePage() {
                       <CopyButton value={wallet.address} label="the address" />
                     </div>
                     <p className="tiny muted" style={{ marginTop: 10 }}>
-                      This address is where funds land when somebody sends {activeChain.nativeToken.symbol} to
-                      this account from outside CloakPay. It is shown here and nowhere else in the app — no
-                      receipt, no profile and no transaction record prints it.
+                      Use this address to receive {activeChain.nativeToken.symbol} from outside CloakPay.
                     </p>
                   </>
                 ) : (
@@ -105,13 +102,12 @@ export default async function ReceivePage() {
             <ComingSoon
               title="Shielded Pool"
               icon="shield"
-              body="Nothing arriving here is shielded today, and nothing on this page operates the pool."
-              note={poolStatusSentence(activeChain.chainId)}
+              body="Private payments are coming soon."
             />
 
             <Notice tone="info" title="Money coming in">
-              A payment from another CloakPay user arrives the moment the network confirms it. Anything
-              arriving from an external wallet lands at the address above.
+              Payments arrive as soon as the network confirms them. Funds sent from outside CloakPay land at
+              the address above.
             </Notice>
           </div>
         </div>

@@ -43,7 +43,7 @@ export default async function LinksPage() {
     <AuthedShell>
       <PageHeader
         title="Payment links"
-        subtitle="A link is a request with a rule set. Share it anywhere; the payer signs in only when they pay."
+        subtitle="Share a link and anyone can pay it. The payer signs in only when they pay."
         actions={
           <Link href="/links/new" className="btn btn-primary btn-sm">
             <Icon name="plus" size={15} />
@@ -58,10 +58,10 @@ export default async function LinksPage() {
             <Stat label="Links" value={links.length} hint={`${active} active`} />
           </Card>
           <Card>
-            <Stat label="Payments settled" value={settled} hint="Confirmed against the chain" />
+            <Stat label="Payments settled" value={settled} hint="Confirmed" />
           </Card>
           <Card>
-            <Stat label="Disabled" value={links.length - active} hint="Off, but kept for the record" />
+            <Stat label="Disabled" value={links.length - active} hint="No longer payable" />
           </Card>
         </div>
       ) : null}
@@ -69,7 +69,7 @@ export default async function LinksPage() {
       {links.length === 0 ? (
         <EmptyState
           title="No links yet"
-          body="A link is the fastest way to get paid by someone who has never used CloakPay. They get a page, a price and a sign-in prompt."
+          body="Send a link to anyone. They get a payment page, an amount and a sign-in prompt."
           action={
             <Link href="/links/new" className="btn btn-primary btn-sm">
               Create your first link
@@ -97,7 +97,6 @@ export default async function LinksPage() {
                         {state}
                       </Badge>
                       <Badge kind={link.mode === "private" ? "private" : "public"}>
-                        {link.mode === "private" ? "Private" : "Direct transfer"}
                       </Badge>
                     </div>
                     <p className="tiny muted" style={{ marginTop: 4 }}>

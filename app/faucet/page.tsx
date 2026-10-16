@@ -69,18 +69,16 @@ export default async function FaucetPage() {
 
         <div className="stack">
           <Notice tone="info" title="Where the address is">
-            Your receive address is on the{" "}
+            Copy your address from the{" "}
             <Link className="link" href="/receive">
               Receive page
             </Link>
-            . CloakPay keeps addresses to that one screen — payments between CloakPay users are addressed to
-            usernames, so no other page needs one.
+            .
           </Notice>
 
           <Notice tone="info" title="Why there is no claim button here">
-            CloakPay does not run a faucet and the Elysium faucet publishes no API, so a button on this page
-            could only pretend to work. Requests are rate limited per address by the faucet itself, and
-            nothing in CloakPay can or should bypass that.
+            CloakPay does not run a faucet. The official Elysium faucet applies its own rate limit per
+            address, so requests have to be made there.
           </Notice>
         </div>
       </div>

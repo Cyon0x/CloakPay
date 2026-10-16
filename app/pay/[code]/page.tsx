@@ -7,7 +7,6 @@ import { CheckoutPanel, type CheckoutLink } from "@/components/CheckoutPanel";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { activeChain } from "@/config/chain";
-import { getPoolDeployment, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +103,6 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
             isOwner={viewer?.userId === link.owner_user_id}
             walletAddress={wallet?.address ?? null}
             payerUsername={viewer?.username ?? null}
-            privateBlocker={poolStatusSentence(activeChain.chainId)}
             faucetUrl={activeChain.faucetUrl}
           />
 
@@ -112,12 +110,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
             <div style={{ padding: 20 }}>
               <p className="table-head">Before you pay</p>
               <ul className="stack-sm" style={{ marginTop: 10, paddingLeft: 18, color: "var(--color-slate-700)" }}>
+                <li>The payment goes from your CloakPay account to theirs, by username.</li>
                 <li>The link shows only what its owner chose to disclose.</li>
-                <li>
-                  The payment goes from your CloakPay account to theirs. Neither side is shown an address —
-                  not on this page, and not on the receipt.
-                </li>
-                <li>The link never contains a key or a spending secret.</li>
               </ul>
             </div>
           </Card>
@@ -128,7 +122,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
 
           <p className="tiny muted" style={{ marginTop: 18, textAlign: "center" }}>
             <Link href="/how-it-works" className="link">
-              How CloakPay handles privacy
+              How CloakPay works
             </Link>
           </p>
         </div>

@@ -1,11 +1,14 @@
 /**
  * What CloakPay actually hides, stated once.
  *
- * The landing page and the in-app Privacy section render the same three lists,
- * so the description of the shielded pool cannot drift between the marketing
- * page and the product. These describe the design as written in
- * `contracts/src/ShieldedPool.sol`; they are not a promise about a deployment
- * that does not exist yet.
+ * Written for the pool's own page, and kept here rather than deleted while the
+ * pool is switched off: the lists describe the design as written in
+ * `contracts/src/ShieldedPool.sol`, so when private payments come back they can
+ * be rendered again without restating what the pool does and does not hide.
+ *
+ * Nothing renders them today. The public pages say what a user needs to know --
+ * that private payments are coming soon, and that an ordinary transfer is not
+ * private -- without the internals.
  */
 
 export const HIDDEN: readonly string[] = [

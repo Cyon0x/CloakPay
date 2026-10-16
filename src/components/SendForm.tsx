@@ -346,14 +346,12 @@ export function SendForm({
         <ComingSoon
           title="External Transfer"
           icon="external"
-          body="Sending to a wallet address that is not a CloakPay account is paused. This page no longer asks for one, and neither does any other screen."
-          note="Payments to CloakPay usernames are unaffected, and the transfer code behind this is untouched. It will return in a future update."
+          body="Sending to a wallet outside CloakPay is coming soon."
         />
         <ComingSoon
           title="Shielded Pool"
           icon="shield"
-          body="Private payments are paused while CloakPay focuses on paying people by username. It is not offered here, so a payment can never be quietly settled as though it were private."
-          note="The contracts, the circuits and the notes are all still in place, ready for the feature to come back."
+          body="Private payments are coming soon."
         />
       </div>
     </div>

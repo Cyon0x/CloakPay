@@ -60,8 +60,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           <div style={{ marginTop: 16 }}>
             <Notice tone="info" title={receipt.complete ? "How to read this receipt" : "This payment is not complete"}>
               {receipt.complete
-                ? `The reference above is the payment's id inside CloakPay, and it is the only reference you need to quote to support. This receipt deliberately carries no wallet address and no transaction hash: it records the payment, and it is not a pointer anybody can follow to a wallet or to an explorer. Testing happens on a public test network, so a transfer made here can still be seen on chain — but your receipt does not carry the means to look it up.`
-                : "CloakPay only issues a completed receipt for a payment the network has confirmed. Nothing is downloaded for a payment in another state, because a receipt is a claim that money moved."}
+                ? "Quote the reference above to support. This receipt records the payment itself, so it shows no wallet address and no transaction hash."
+                : "A receipt is issued once the network confirms a payment, so there is nothing to download yet."}
             </Notice>
           </div>
         </div>

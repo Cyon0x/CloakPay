@@ -19,13 +19,10 @@ import { QrCode } from "./QrCode";
  * all of which the owner typed on this screen.
  */
 export function LinkComposer({
-  poolSentence,
   symbol,
   decimals,
   appUrl,
 }: {
-  /** Why a private link is not on offer, in the shared by-chain wording. */
-  poolSentence: string;
   symbol: string;
   decimals: number;
   appUrl: string;
@@ -164,8 +161,7 @@ export function LinkComposer({
           <ComingSoon
             title="Private payment links"
             icon="shield"
-            body="A link that asks to be paid through the shielded pool is paused. Links created now request an ordinary payment between CloakPay accounts, and say so on the payment page."
-            note={poolSentence}
+            body="Private payment links are coming soon."
           />
 
           <fieldset className="fieldset">
@@ -208,8 +204,7 @@ export function LinkComposer({
               <li>An expiry and a usage limit.</li>
             </ul>
             <p className="tiny muted" style={{ marginTop: 12 }}>
-              It never carries a private key, a note secret, or a wallet address. Anyone who has the link
-              can open the page, which is worth remembering before you post it publicly.
+              Anyone who has the link can open it, so treat it as public.
             </p>
             <button
               className="btn btn-primary btn-block"

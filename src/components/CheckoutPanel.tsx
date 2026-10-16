@@ -47,7 +47,6 @@ export function CheckoutPanel({
   isOwner,
   walletAddress,
   payerUsername,
-  privateBlocker,
   faucetUrl,
 }: {
   link: CheckoutLink;
@@ -56,8 +55,6 @@ export function CheckoutPanel({
   walletAddress: string | null;
   /** The signed-in payer's username, so the receipt can name both parties. */
   payerUsername: string | null;
-  /** Why a private payment is unavailable, in the shared wording. */
-  privateBlocker: string;
   faucetUrl: string;
 }) {
   const settlement = useSettlement();
@@ -187,9 +184,8 @@ export function CheckoutPanel({
             </Notice>
           ) : privateRequested ? (
             <Notice tone="warn" title="This link asks for a private payment">
-              Its owner asked to be paid through the shielded pool, and private payments are paused.{" "}
-              {privateBlocker} CloakPay will not settle it as an ordinary transfer, because that is not the
-              payment that was requested — ask the owner for a new link.
+              Private payments are not available yet, so this link cannot be paid. Ask the owner to send you
+              a new one.
             </Notice>
           ) : settlement.state.phase === "failed" ? (
             <>

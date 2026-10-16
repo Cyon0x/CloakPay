@@ -26,8 +26,8 @@ export default async function OnboardingPage() {
 
           <div style={{ marginTop: 24 }}>
             <Notice tone="info" title="Before you continue">
-              This is a testnet. Anything you deposit has no monetary value, and no independent audit of
-              CloakPay or its contracts has taken place.
+              This is a testnet. Anything you deposit has no monetary value, and CloakPay has not been
+              audited.
             </Notice>
           </div>
 

@@ -82,9 +82,7 @@ export default async function ActivityPage() {
           </Card>
         )}
         <p className="tiny muted" style={{ marginTop: 16 }}>
-          A payment here is an ordinary transfer on a public test network, so it is visible on chain to
-          anyone who looks. CloakPay keeps the link between a username and an address to itself, which is why
-          this page and your receipts name people by username.
+          Payments are ordinary transfers on a public testnet, so they can be seen on chain.
         </p>
       </>
     </AuthedShell>

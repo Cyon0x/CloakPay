@@ -115,13 +115,7 @@ export function WalletSummary({
               </button>
             </>
           ) : address ? (
-            <>
-              Elysium Testnet · {symbol} is the only asset CloakPay holds. Your receive address lives on the{" "}
-              <Link href="/receive" className="link">
-                Receive page
-              </Link>
-              .
-            </>
+            `Elysium Testnet · ${symbol}`
           ) : (
             "No wallet on this account yet."
           )}

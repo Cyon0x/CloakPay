@@ -6,11 +6,10 @@ export const metadata = { title: "Terms of service" };
 
 const SECTIONS: [string, string][] = [
   ["Testnet software", `CloakPay runs on ${activeChain.name}. It is experimental, unaudited software. The tokens it handles have no monetary value. Do not send anything you cannot afford to lose.`],
-  ["No custody of your wallet", "Your wallet is self-custodial. CloakPay stores an encrypted envelope of your secret material, but it cannot decrypt it, cannot sign on your behalf, and cannot recover your funds if you lose both your passphrase and your mnemonic."],
-  ["Your responsibilities", "Keep your mnemonic offline and your passphrase strong and unique. Anyone who obtains an unspent note or your secret material can spend the corresponding funds."],
-  ["Paused features", "External transfers and the shielded pool are paused and labelled \u201cComing soon\u201d. Neither can be started from the interface or through the API, and the contracts and circuit code behind them are kept in place for a later release."],
-  ["The shielded pool", "If the pool is switched back on, deposits and withdrawals would be made through a smart contract that CloakPay does not control after deployment. A contract defect could result in loss of funds. No audit has been performed."],
-  ["Privacy limits", "CloakPay reduces what an observer can learn about a payment; it does not guarantee anonymity. Small anonymity sets, timing, gas payment, and your own behaviour can all reduce privacy."],
+  ["No custody of your wallet", "Your wallet is self-custodial. CloakPay stores an encrypted copy of your secret material, but it cannot open it, cannot sign on your behalf, and cannot recover your funds if you lose both your passphrase and your mnemonic."],
+  ["Your responsibilities", "Keep your mnemonic offline and your passphrase strong and unique. Anyone who obtains them can spend your funds."],
+  ["Coming soon", "External transfers and the shielded pool are not available yet. Neither can be started from the interface or through the API. When the shielded pool is offered, private payments will be handled by a smart contract, and a defect in it could cause loss of funds."],
+  ["Privacy limits", "CloakPay does not guarantee anonymity. A payment made today is an ordinary transfer on a public testnet and can be seen on chain."],
   ["Acceptable use", "Do not use CloakPay to break the law, to evade lawful obligations, or to move funds you do not own. You are responsible for complying with the rules that apply to you."],
   ["Availability", "The service may be unavailable, the testnet may be reset, and balances may be wiped by the network. No warranty is given of any kind."],
   ["Changes", "These terms may change as the project develops. Continued use after a change means you accept it."],

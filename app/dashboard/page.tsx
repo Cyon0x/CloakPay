@@ -8,7 +8,6 @@ import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain } from "@/config/chain";
-import { poolStatusSentence } from "@/config/pool";
 import { EXTERNAL_TRANSFER_PAUSED } from "@/config/features";
 
 export const metadata = { title: "Dashboard" };
@@ -19,7 +18,9 @@ export const dynamic = "force-dynamic";
  * they are paying. It leads with the username, because that is the thing a
  * CloakPay payment is addressed to, and with the balance that a payment is
  * actually spent from. The two features that are paused are listed at the
- * bottom as paused, so nothing here suggests they are available.
+ * bottom as paused, so nothing here suggests they are available -- stated in
+ * one line each, because a user needs to know a feature is not there yet, not
+ * how it is built or what state its implementation is in.
  */
 export default async function DashboardPage() {
   const user = await currentUserOrRedirect();
@@ -77,8 +78,7 @@ export default async function DashboardPage() {
             <div style={{ padding: 20 }}>
               <p className="table-head">Pay someone</p>
               <p className="tiny muted" style={{ marginTop: 8 }}>
-                Type a CloakPay username on the Send page and pay them in {activeChain.nativeToken.symbol}. No
-                address is asked for or shown.
+                Send {activeChain.nativeToken.symbol} to another CloakPay user by typing their username.
               </p>
               <Link href="/send" className="btn btn-primary btn-sm" style={{ marginTop: 14 }}>
                 <Icon name="send" size={14} />
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
             <div style={{ padding: 20 }}>
               <p className="table-head">Receipts</p>
               <p className="tiny muted" style={{ marginTop: 8 }}>
-                Every confirmed payment has a receipt you can download again from the transaction history.
+                Download a receipt for any confirmed payment.
               </p>
               <Link href="/transactions" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
                 <Icon name="list" size={14} />
@@ -102,8 +102,7 @@ export default async function DashboardPage() {
             <div style={{ padding: 20 }}>
               <p className="table-head">Get paid</p>
               <p className="tiny muted" style={{ marginTop: 8 }}>
-                Share @{user.username} and the payment finds you. Receive also shows the address for funds
-                from outside CloakPay.
+                Share @{user.username} and other CloakPay users can pay you.
               </p>
               <Link href="/receive" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
                 <Icon name="receive" size={14} />
@@ -170,19 +169,12 @@ export default async function DashboardPage() {
             <ComingSoon
               title="Shielded Pool"
               icon="shield"
-              body="Private payments are paused while CloakPay focuses on paying people by username."
-              note={poolStatusSentence(activeChain.chainId)}
-            >
-              <Link href="/privacy" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>
-                What the pool does
-                <Icon name="arrowRight" size={14} />
-              </Link>
-            </ComingSoon>
+              body="Private payments are coming soon."
+            />
             <ComingSoon
               title="External Transfer"
               icon="external"
               body={EXTERNAL_TRANSFER_PAUSED}
-              note="Receiving from an external wallet still works: the address is on the Receive page."
             />
           </div>
         </section>

@@ -4,20 +4,51 @@ import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "Security and privacy" };
 
+/**
+ * What CloakPay protects, and what it does not.
+ *
+ * Written for a user making a decision, so each line says what it means for
+ * them rather than how it is implemented. The construction — key derivation,
+ * session storage, the pool's circuits — is in `docs/ARCHITECTURE.md`, where it
+ * is useful to the people who need it and invisible to everyone else.
+ */
 const THREATS: [string, string][] = [
-  ["Account takeover", "Sessions are opaque 256-bit tokens; only a SHA-256 hash is stored. Cookies are HttpOnly, SameSite=Lax, and Secure in production. Sign-out revokes server-side."],
-  ["OAuth callback manipulation", "State is generated per attempt, stored server-side, single-use, and expires in ten minutes. PKCE S256 is used with both providers. A mismatched state is rejected as the same error as an unknown one."],
-  ["Session theft", "Sessions are revocable and expire after fourteen days. No provider token is retained, so a stolen CloakPay session cannot be replayed against Google or X."],
-  ["Username enumeration", "Availability checks are rate limited per IP and answers for reserved and taken names are worded identically in the UI."],
-  ["Duplicate payment submission", "Every payment carries a client-generated idempotency key with a unique index, so a retried request returns the original record rather than creating a second one."],
-  ["Link replay", "Link usage is incremented under a row lock. One-time links are bound to their first claimant, and a partial unique index allows only one live payment per link."],
-  ["Private note theft", "Notes are AEAD-sealed to the recipient's P-256 viewing key. The server stores ciphertext it cannot open, and the viewing key cannot move funds."],
-  ["Wallet key compromise", "The mnemonic is generated on the device and never transmitted in the clear. The server holds only an AES-256-GCM envelope keyed by PBKDF2-SHA256 at 600,000 iterations. That envelope is offline-guessable if the passphrase is weak, which is why a passphrase rather than a short PIN is required."],
-  ["Double spending a note", "The nullifier is the guard and it lives in the contract. A second withdrawal with the same nullifier reverts, whether or not the frontend cooperates."],
-  ["Invalid proof or wrong public inputs", "The verifier is the authority. Recipient, relayer, fee and root are public inputs, so altering any of them invalidates the proof. This is covered by tests."],
-  ["Incorrect token accounting", "One tree per denomination, and the contract can only ever pay out the denomination whose tree accepted the note's root. A test asserts the pool never owes more than it holds."],
-  ["RPC interference", "A malicious RPC can withhold data or lie about state, but it cannot forge a proof or move funds. Deployments can point at another Elysium RPC endpoint."],
-  ["Metadata leakage", "Notifications deliberately omit amounts. Note secrets are kept out of URLs, logs, and analytics. The backend does learn which account is being paid, because it routes the payment."],
+  [
+    "Account takeover",
+    "Sessions are revocable, expire after fourteen days, and are stored in a form that cannot be replayed at Google or X. Signing out ends the session on the server, not just in your browser.",
+  ],
+  [
+    "Sign-in tampering",
+    "Every sign-in attempt is verified against the provider before an account is created. An expired, reused or altered response is rejected, and nothing is created.",
+  ],
+  [
+    "Username probing",
+    "Usernames are unique, availability checks are rate limited, and the answer for a taken name and a reserved one is worded identically — so a name cannot be discovered by probing.",
+  ],
+  [
+    "Duplicate payments",
+    "Every payment carries a key that a repeated tap or a retried request resolves to, so a retry returns the original payment instead of sending a second one.",
+  ],
+  [
+    "Payment link misuse",
+    "Usage is counted on the server. A one-time link stops after the first payment, and a link that is disabled or expired cannot be paid.",
+  ],
+  [
+    "Wallet key compromise",
+    "Your mnemonic is generated on your device and never sent anywhere in the clear. CloakPay keeps only an encrypted copy, and your passphrase is what opens it — which is why a short or reused passphrase is the weakest link.",
+  ],
+  [
+    "Network interference",
+    "A malicious RPC node can withhold data or lie about the state of the chain, but it cannot move your funds or sign for you.",
+  ],
+  [
+    "Notification leakage",
+    "Notifications never include an amount, so a locked screen cannot show what you were paid.",
+  ],
+  [
+    "What CloakPay can see",
+    "Because CloakPay routes each payment, it knows which account is paying which and when, and it holds the link between a username and an address. That link is never published: no page and no receipt prints an address.",
+  ],
 ];
 
 export const dynamic = "force-dynamic";
@@ -31,8 +62,7 @@ export default async function SecurityPage() {
         <div className="shell" style={{ maxWidth: 820, paddingTop: 48, paddingBottom: 90 }}>
           <h1 style={{ fontSize: 32 }}>Security and privacy</h1>
           <p className="lede" style={{ marginTop: 14 }}>
-            What CloakPay defends against, and what it does not. The list below is the threat model; it is
-            the same one the tests exercise.
+            What CloakPay protects against, and what it does not.
           </p>
           <dl className="stack" style={{ marginTop: 32 }}>
             {THREATS.map(([threat, mitigation]) => (
@@ -45,12 +75,19 @@ export default async function SecurityPage() {
           <section className="card-quiet" style={{ padding: 22, marginTop: 30 }}>
             <h2 style={{ fontSize: 17 }}>Honest limitations</h2>
             <ul className="stack-sm" style={{ marginTop: 10, paddingLeft: 18, fontSize: 14, color: "var(--color-slate-700)" }}>
-              <li>Not audited. No independent review has happened, and nothing here should be treated as production-grade.</li>
-              <li>The trusted setup was generated locally for development. A real deployment needs a multi-party ceremony.</li>
-              <li>Notes are bearer instruments; the recipient should claim promptly.</li>
-              <li>Amounts are hidden only within the fixed denomination set, and only as well as the number of outstanding notes allows.</li>
-              <li>Running on {activeChain.name}, which is a testnet. Its sequencer is centralised.</li>
-              <li>The passphrase protecting a backed-up wallet is the weakest link; a short or reused one can be attacked offline.</li>
+              <li>CloakPay has not been independently audited.</li>
+              <li>
+                It runs on {activeChain.name}, a testnet with no monetary value. The network may be reset and
+                balances may be wiped.
+              </li>
+              <li>
+                Paying by username is not private. A payment today is an ordinary transfer, visible on chain
+                to anyone who looks.
+              </li>
+              <li>
+                The passphrase protecting your encrypted wallet is the weakest link; a short or reused one can
+                be attacked offline.
+              </li>
             </ul>
           </section>
         </div>

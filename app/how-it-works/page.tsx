@@ -1,89 +1,60 @@
 import Link from "next/link";
 import { TopBar } from "@/components/Nav";
 import { currentUser } from "@/lib/session";
-import { Notice } from "@/components/ui";
 import { activeChain } from "@/config/chain";
-import { getPoolDeployment, poolStatus, poolStatusSentence } from "@/config/pool";
-import { shieldedPoolEnabled } from "@/config/features";
 
 export const metadata = { title: "How it works" };
+export const dynamic = "force-dynamic";
 
+/**
+ * How it works, for the person using it.
+ *
+ * This page used to walk through the shielded pool's construction — Poseidon
+ * commitments, a Merkle tree, nullifiers and Groth16 proofs. That is a
+ * description of how the software is built, and it belongs in
+ * `docs/ARCHITECTURE.md` alongside the rest of the engineering, not in front of
+ * someone deciding whether to send a payment. What a user needs here is the
+ * five things they will actually do, and one honest line about what is not
+ * available yet.
+ */
 const STEPS = [
   {
-    title: "A note is created on your device",
-    body: "When you deposit, your browser generates two random secrets, a nullifier and a secret, and hashes them together with Poseidon to produce a commitment. Only the commitment is published.",
+    title: "Sign in",
+    body: "Sign in with Google or X. CloakPay never asks for a password.",
   },
   {
-    title: "The commitment joins a Merkle tree",
-    body: "The pool inserts the commitment as a leaf. The tree root changes, and the contract remembers every root it has produced, because a proof is always made against the root that existed when the note was created.",
+    title: "Choose a username",
+    body: "Your username is your payment address. People pay @you, so nobody copies or checks a wallet address.",
   },
   {
-    title: "The note is sealed to the recipient",
-    body: "To pay someone, your browser encrypts the note with the recipient's viewing key using ECIES (P-256, HKDF, AES-256-GCM). We can store the ciphertext and still be unable to read it.",
+    title: "Send a payment",
+    body: `On the Send page, type the other person's CloakPay username and an amount, review the details, and confirm with your passphrase. The payment settles in ${activeChain.nativeToken.symbol} and the recipient is credited once the network confirms it.`,
   },
   {
-    title: "A Groth16 proof is generated in the browser",
-    body: "When the recipient withdraws, their device proves, without revealing which leaf it is, that it knows (nullifier, secret) for some commitment in the tree, and that the nullifier has not been used before.",
+    title: "Get paid",
+    body: "Share your username, or create a payment link with an optional amount, expiry and usage limit. The Receive page also shows the address to use for money sent from outside CloakPay.",
   },
   {
-    title: "The contract verifies and pays",
-    body: `The proof is verified by the on-chain verifier using the BN254 pairing precompile. The nullifier is recorded so the note cannot be spent twice, and ${activeChain.nativeToken.symbol} is released. The chain never learns which deposit this was.`,
+    title: "Keep the receipt",
+    body: "Every confirmed payment has a receipt naming both usernames with the amount and the time. Download it again whenever you like from your transaction history.",
   },
 ];
 
-export const dynamic = "force-dynamic";
-
 export default async function HowItWorksPage() {
   const user = await currentUser();
-  const status = poolStatus(activeChain.chainId);
-  const poolLive = status === "ready";
-  const paused = !shieldedPoolEnabled() && Boolean(getPoolDeployment(activeChain.chainId));
-  const deployment = getPoolDeployment(activeChain.chainId);
+
   return (
     <div className="app-shell">
       <TopBar user={user} />
       <main id="main" className="app-body">
         <div className="shell" style={{ maxWidth: 760, paddingTop: 48, paddingBottom: 90 }}>
-          <h1 style={{ fontSize: 32 }}>How the privacy works</h1>
+          <h1 style={{ fontSize: 32 }}>How CloakPay works</h1>
           <p className="lede" style={{ marginTop: 14 }}>
-            The short version: a shielded pool built from Poseidon commitments, a Merkle tree, nullifiers
-            and Groth16 proofs that the contract verifies itself. No frontend toggle, no database
-            permission, and no claim that a plain transfer is private.
+            CloakPay is a wallet with a username. You sign in, claim a name, and pay other CloakPay users by
+            typing it.
           </p>
 
-          <div style={{ marginTop: 22 }}>
-            {paused ? (
-              <Notice tone="warn" title="Paused">
-                {poolStatusSentence(activeChain.chainId)} What CloakPay does today is pay another CloakPay
-                user by username, as an ordinary transfer. The steps below describe the pool as built, not as
-                offered.
-              </Notice>
-            ) : poolLive ? (
-              <Notice tone="ok" title="In service">
-                The pool is deployed on {activeChain.name} at{" "}
-                <span className="mono">{deployment?.pool}</span>. Private payments are open.
-              </Notice>
-            ) : deployment ? (
-              <Notice tone="warn" title="Deployed, not yet open">
-                The pool is deployed on {activeChain.name} at{" "}
-                <span className="mono">{deployment.pool}</span>, and a real Groth16 proof verifies against
-                its verifier. The deposit and withdrawal flow a user would drive is still being built, so
-                CloakPay does not offer a private payment today. Rather than quietly sending a public
-                transfer and calling it private, the option is switched off and says so. The steps below
-                describe the design as implemented.
-              </Notice>
-            ) : (
-              <Notice tone="warn" title="Built, tested, not yet deployed">
-                The circuit compiles, the contract passes its tests, and a real Groth16 proof verifies
-                against a deployed verifier in the test suite. No deployment has been recorded for{" "}
-                {activeChain.name} yet, so CloakPay does not offer a private payment today. Rather than
-                quietly sending a public transfer and calling it private, the option is switched off and
-                says so. The steps below describe the design as implemented.
-              </Notice>
-            )}
-          </div>
-
-          <div className="stack" style={{ marginTop: 34 }}>
+          <div className="stack" style={{ marginTop: 32 }}>
             {STEPS.map((step, index) => (
               <section key={step.title} className="card-flat" style={{ padding: 22 }}>
                 <p className="mono tiny muted">{String(index + 1).padStart(2, "0")}</p>
@@ -96,23 +67,23 @@ export default async function HowItWorksPage() {
           </div>
 
           <section className="card-quiet" style={{ padding: 22, marginTop: 30 }}>
-            <h2 style={{ fontSize: 17 }}>What is not private</h2>
-            <p className="muted" style={{ marginTop: 8, fontSize: 14 }}>
-              Amounts live inside fixed denominations, so an observer learns which denomination moved, not
-              the exact figure. Deposits and withdrawals are individually public. If only a few notes are
-              outstanding in a denomination, the anonymity set is small. That is a real limit, and it shrinks
-              every time someone reuses one wallet address for both a deposit and a withdrawal.
-            </p>
-            <p className="muted" style={{ marginTop: 10, fontSize: 14 }}>
-              Notes are bearer instruments. Whoever holds an unspent note can spend it, so a recipient
-              should claim a payment rather than letting it sit. Binding a note to a recipient key is a
-              planned upgrade and is not implemented today.
+            <h2 style={{ fontSize: 17 }}>Not available yet</h2>
+            <ul
+              className="stack-sm"
+              style={{ marginTop: 10, paddingLeft: 18, fontSize: 14, color: "var(--color-slate-700)" }}
+            >
+              <li>Shielded (private) payments — coming soon.</li>
+              <li>Sending to a wallet outside CloakPay — coming soon.</li>
+            </ul>
+            <p className="muted" style={{ marginTop: 12, fontSize: 14 }}>
+              A payment today is an ordinary transfer on {activeChain.name}, a public testnet, so it can be
+              seen on chain and the amounts have no monetary value.
             </p>
           </section>
 
           <p style={{ marginTop: 26 }}>
             <Link href="/security" className="link">
-              Read the full threat model
+              Security and privacy
             </Link>
           </p>
         </div>

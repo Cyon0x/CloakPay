@@ -5,8 +5,6 @@ import { listIdentities } from "@/lib/auth/accounts";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { ComingSoon } from "@/components/ComingSoon";
-import { poolStatusSentence } from "@/config/pool";
-import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -67,12 +65,11 @@ export default async function SettingsPage() {
                     </span>
                   </div>
                   <p className="tiny muted">
-                    The address this wallet receives at is on the{" "}
+                    View or copy your receiving address on the{" "}
                     <Link className="link" href="/receive">
                       Receive page
                     </Link>
-                    . It is the only place in CloakPay that shows it: payments here are addressed to
-                    usernames, not to addresses.
+                    .
                   </p>
                 </div>
                 <Notice tone="warn" title="Recovery">
@@ -93,23 +90,21 @@ export default async function SettingsPage() {
                   private setting.
                 </p>
                 <p className="tiny muted" style={{ marginTop: 10 }}>
-                  CloakPay keeps the link between your username and your wallet to itself, but the payments
-                  themselves are ordinary transfers on a public test network: they can be seen on chain.
+                  Payments are ordinary transfers on a public testnet, so they can be seen on chain.
                 </p>
               </div>
             </Card>
             <ComingSoon
               title="Shielded Pool"
               icon="shield"
-              body="Private payments are paused, so your viewing key is not in use and no notes are being created or spent."
-              note={poolStatusSentence(activeChain.chainId)}
+              body="Private payments are coming soon."
             />
             <Card>
               <div style={{ padding: 20 }}>
                 <p className="table-head">Notifications</p>
                 <p className="tiny muted" style={{ marginTop: 10 }}>
-                  In-app notifications are on. Amounts are deliberately left out of notification text so a
-                  lock-screen preview cannot leak a payment.
+                  In-app notifications are on. Amounts are never included, so a lock-screen preview cannot
+                  leak a payment.
                 </p>
               </div>
             </Card>
@@ -120,7 +115,7 @@ export default async function SettingsPage() {
                   <button className="btn btn-danger btn-sm" type="submit">Sign out</button>
                 </form>
                 <p className="tiny muted" style={{ marginTop: 10 }}>
-                  Signing out revokes the session server-side.
+                  Signing out ends your session.
                 </p>
               </div>
             </Card>

@@ -133,16 +133,22 @@ export function poolStatus(chainId: number): PoolStatus {
   return SHIELDED_CLIENT_READY ? "ready" : "in-development";
 }
 
-/** One sentence describing the pool, shared by every screen that mentions it. */
+/**
+ * One short sentence describing the pool, shared by every screen that mentions
+ * it. Written for the person reading the screen, not for the engineer who
+ * built it: the pool's design, its contracts and its proofs are documented in
+ * `docs/ARCHITECTURE.md`, and repeating any of that here is noise a user has to
+ * read past to use the product.
+ */
 export function poolStatusSentence(chainId: number): string {
   switch (poolStatus(chainId)) {
     case "paused":
-      return "The shielded pool is paused while CloakPay focuses on payments between CloakPay users. It will return in a future update. Nothing has been deleted: the contracts, the notes and the proofs are all still here, and no payment is ever quietly settled as a private one in the meantime.";
+      return "Private payments are coming soon.";
     case "ready":
-      return "The shielded pool is live and private payments are open.";
+      return "The shielded pool is live.";
     case "in-development":
-      return "The shielded pool contracts are deployed on this network, but CloakPay's deposit and withdrawal flow is still being built, so a private payment cannot be completed yet.";
+      return "The shielded pool is not open yet.";
     default:
-      return "The shielded pool has no deployment on this network yet, so a private payment cannot be made.";
+      return "The shielded pool is not available on this network yet.";
   }
 }

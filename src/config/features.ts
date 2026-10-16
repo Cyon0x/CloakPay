@@ -43,6 +43,10 @@ export function shieldedPoolEnabled(): boolean {
 /** The one sentence every surface uses for a paused feature. */
 export const COMING_SOON = "Coming soon";
 
-/** Why an external transfer is refused, in the same words everywhere. */
+/**
+ * Why an external transfer is refused, in the same words everywhere. Kept to
+ * one plain sentence: it reaches the user both as an on-screen notice and as
+ * the message on a 409, and neither is the place for the reasoning.
+ */
 export const EXTERNAL_TRANSFER_PAUSED =
-  "External transfers are paused. CloakPay currently sends funds between CloakPay users only, by username. Sending to a wallet address that is not a CloakPay account will return in a future update.";
+  "Sending to a wallet outside CloakPay is coming soon.";

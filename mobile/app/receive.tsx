@@ -117,9 +117,8 @@ export default function Receive() {
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Shielded pool — coming soon</Text>
           <Text style={styles.muted}>
-            No, not today: the shielded pool is paused while CloakPay focuses on paying people by username,
-            and it is labelled “Coming soon” wherever it appears. Payments to you arrive as ordinary transfers
-            to @{username}, and the code behind the pool is still in place for when it returns.
+            Private payments are coming soon. Until then, payments to @{username} arrive as ordinary
+            transfers.
           </Text>
         </Card>
 
@@ -139,8 +138,7 @@ export default function Receive() {
                 />
               </View>
               <Text style={styles.muted}>
-                Where funds land when somebody sends HYPE from outside CloakPay. This screen is the only place
-                the app shows an address; sending to an external wallet is paused and labelled “Coming soon”.
+                Use this address to receive HYPE from outside CloakPay.
               </Text>
             </>
           ) : (

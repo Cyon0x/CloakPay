@@ -5,55 +5,53 @@ import { Mark } from "@/components/Brand";
 import { Icon } from "@/components/Icon";
 import { currentUser } from "@/lib/session";
 import { activeChain } from "@/config/chain";
-import { DENOMINATIONS, poolStatus } from "@/config/pool";
-import { HIDDEN, NEVER, VISIBLE } from "@/config/privacy";
 
 /**
  * The landing page.
  *
- * Only features that are actually running appear here. The shielded pool is
- * built, deployed and verified on testnet and is switched off, so the page says
- * paused rather than describing it as a capability, and the status line under
- * the hero buttons names what really works today.
+ * Written for someone deciding whether to use CloakPay: what it does, the one
+ * thing they would actually do with it, and which features are not here yet.
+ * The pool's design and the rest of the engineering are in `docs/`, not on this
+ * page.
  */
 const LIVE = [
   {
     icon: "user",
     title: "Send and receive by username",
-    body: "Find people by their CloakPay username and pay them by typing it. No address to copy, nothing to look up.",
+    body: "Find people by their CloakPay username and pay them by typing it.",
     href: "/how-it-works",
   },
   {
     icon: "link",
     title: "Payment links and QR codes",
-    body: "Create a request with an optional amount, expiry and usage limit, then share the link or let someone scan it.",
+    body: "Create a request and share it as a link or a QR code.",
     href: "/how-it-works",
   },
   {
     icon: "wallet",
     title: "A wallet you actually own",
-    body: "Twelve words generated in your browser and sealed with your passphrase. The server stores a ciphertext it cannot open.",
+    body: "Your wallet is created in your browser and sealed with your passphrase.",
     href: "/security",
   },
   {
     icon: "shield",
     title: "Shielded pool \u2014 coming soon",
-    body: "The pool is written, deployed and verified on testnet, and paused while CloakPay focuses on paying people by username. Nothing pretends an ordinary transfer is private.",
+    body: "Private payments are coming soon.",
     href: "/privacy",
   },
   {
     icon: "external",
     title: "External transfer \u2014 coming soon",
-    body: "Sending to a wallet address outside CloakPay is paused. Paying a CloakPay username works, and receiving from an external wallet still does.",
+    body: "Sending to a wallet outside CloakPay is coming soon.",
     href: "/receive",
   },
 ];
 
 const STEPS = [
-  { title: "Sign in", body: "Google or X. Those are the only two options and no password is created." },
-  { title: "Pick a username", body: "That is how people pay you. They type @you; there is no address to copy or check." },
-  { title: "Send or request", body: "Pay a username, or publish a link that anyone can settle." },
-  { title: "Keep the receipt", body: "Every confirmed payment has a receipt you can download, now or from your transaction history." },
+  { title: "Sign in", body: "Google or X. No password needed." },
+  { title: "Pick a username", body: "That is how other people pay you." },
+  { title: "Send or request", body: "Pay a username, or share a link anyone can pay." },
+  { title: "Keep the receipt", body: "Download a receipt for every confirmed payment." },
 ];
 
 export default async function LandingPage() {
@@ -64,9 +62,6 @@ export default async function LandingPage() {
   // public pages that remain useful while signed in -- how it works, privacy,
   // FAQ, terms -- are deliberately not redirected.
   if (user) redirect("/dashboard");
-
-  const pool = poolStatus(activeChain.chainId);
-  const poolLive = pool === "ready";
 
   return (
     <div className="app-shell">
@@ -98,14 +93,12 @@ export default async function LandingPage() {
               </div>
               <div className="hero-actions-secondary">
                 <Link href="/how-it-works" className="btn btn-ghost">
-                  How the privacy works
+                  How it works
                 </Link>
               </div>
               <p className="status-line">
-                <span className={`dot ${poolLive ? "dot-ok" : "dot-warn"}`} aria-hidden="true" />
-                {poolLive
-                  ? `Shielded pool live on ${activeChain.name}. Chain ${activeChain.chainId}, testnet only.`
-                  : `Wallets, usernames and payment links are live on ${activeChain.name}. Payments go to CloakPay usernames. The shielded pool is paused, and external transfers are paused, both labelled coming soon.`}
+                <span className="dot dot-ok" aria-hidden="true" />
+                Live on {activeChain.name}. Send and receive by username.
               </p>
             </div>
           </div>
@@ -115,10 +108,9 @@ export default async function LandingPage() {
           <div className="shell">
             <div className="section-intro">
               <p className="eyebrow">What you can do today</p>
-              <h2>Simple payments. More privacy.</h2>
+              <h2>Simple payments, by username.</h2>
               <p className="lede">
-                Everything you need to send and receive money on {activeChain.name}, with privacy features
-                developed transparently.
+                Everything you need to send and receive on {activeChain.name}.
               </p>
             </div>
             <div className="grid-2" style={{ marginTop: 28 }}>
@@ -142,76 +134,11 @@ export default async function LandingPage() {
         <section className="section">
           <div className="shell">
             <div className="section-intro">
-              <p className="eyebrow">Privacy</p>
-              <h2>What is actually private</h2>
+              <p className="eyebrow">Getting started</p>
+              <h2>Four steps to your first payment</h2>
               <p className="lede">
-                Privacy claims are worthless unless they are precise. This is the pool's design, stated
-                plainly — including the parts it does not hide. It is paused today, so nothing below is
-                running.
+                Shielded payments are still being finished. Everything below works today.
               </p>
-            </div>
-            <div className="grid-3" style={{ marginTop: 28 }}>
-              <div className="card-flat privacy-col">
-                <p className="table-head">Hidden by the pool</p>
-                <ul className="stack-sm privacy-list">
-                  {HIDDEN.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="card-flat privacy-col">
-                <p className="table-head">Still visible on chain</p>
-                <ul className="stack-sm privacy-list">
-                  {VISIBLE.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="card-flat privacy-col">
-                <p className="table-head">Never on chain</p>
-                <ul className="stack-sm privacy-list">
-                  {NEVER.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="denominations">
-              <div>
-                <p className="table-head">Shielded amounts — coming soon</p>
-                <p className="tiny muted" style={{ marginTop: 8, maxWidth: "58ch" }}>
-                  Deposits are fixed denominations. A fixed set is what makes an anonymity set mean anything:
-                  every note of a given size is interchangeable, so a withdrawal cannot be narrowed down by
-                  comparing amounts.
-                </p>
-              </div>
-              <div className="denomination-list">
-                {DENOMINATIONS.map((denomination) => (
-                  <span key={denomination.id} className="badge badge-private">
-                    <span className="dot" aria-hidden="true" />
-                    {denomination.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <p className="tiny muted" style={{ marginTop: 20 }}>
-              Read the full{" "}
-              <Link href="/security" className="link">
-                threat model and guarantees
-              </Link>
-              . Small pools hide less than large ones. That limit is inherent and it is stated here rather
-              than glossed over.
-            </p>
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="shell">
-            <div className="section-intro">
-              <p className="eyebrow">How it works</p>
-              <h2>Four steps, and none of them mention a seed phrase</h2>
             </div>
             <div className="grid-2" style={{ marginTop: 28 }}>
               {STEPS.map((step, index) => (

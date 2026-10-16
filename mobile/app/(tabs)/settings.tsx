@@ -132,14 +132,8 @@ export default function Settings() {
                 <Text style={styles.kvValue}>Self-custodial</Text>
               </View>
               <Text style={styles.hint}>
-                The address this wallet receives at is on the Receive screen, under “Receive from external
-                wallet”. It is the only place CloakPay shows one: payments here are addressed to usernames,
-                not to addresses.
+                View or copy your receiving address on the Receive screen.
               </Text>
-              <View style={styles.kv}>
-                <Text style={styles.label}>Viewing key</Text>
-                <Text style={styles.kvValue}>{wallet.viewingKeyId ? "Published" : "Missing"}</Text>
-              </View>
               <View style={styles.kv}>
                 <Text style={styles.label}>Unlocked this session</Text>
                 <Text style={styles.kvValue}>{isUnlocked() ? "Yes" : "No"}</Text>

@@ -61,7 +61,6 @@ export default async function PublicProfilePage({
 
               <div className="row" style={{ gap: 8, marginTop: 16 }}>
                 <Badge kind="info">Pays by username</Badge>
-                <span className="tiny muted">Private payments are paused.</span>
               </div>
 
               <div style={{ marginTop: 22 }}>
@@ -83,8 +82,7 @@ export default async function PublicProfilePage({
             </div>
           </Card>
           <p className="tiny muted" style={{ marginTop: 16, textAlign: "center" }}>
-            This page shows a payment identity only. No wallet address, email, or account identifier is
-            published here.
+            This page shows a payment identity only — no wallet address.
           </p>
         </div>
       </main>
