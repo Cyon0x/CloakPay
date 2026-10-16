@@ -21,6 +21,7 @@ export default function Receive() {
   const { user } = useAuth();
   const router = useRouter();
   const [pool, setPool] = useState<PoolInfo | null>(null);
+  const [wallet, setWallet] = useState<{ address: string | null } | null>(null);
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
   const [creating, setCreating] = useState(false);
@@ -32,10 +33,15 @@ export default function Receive() {
     loadPool().then(setPool).catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    api<{ wallet: { address: string | null } | null }>("/api/wallet")
+      .then((data) => setWallet(data.wallet))
+      .catch(() => undefined);
+  }, []);
+
   const username = user?.username ?? "";
   const identity = `${APP_URL}/u/${username}`;
   const linkUrl = created ? `${APP_URL}/pay/${created}` : null;
-  const canReceivePrivately = Boolean(pool?.pool.privateReady);
 
   async function copy(label: string, value: string) {
     await Clipboard.setStringAsync(value);
@@ -109,12 +115,37 @@ export default function Receive() {
         </Card>
 
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Can you receive privately?</Text>
+          <Text style={styles.cardTitle}>Shielded pool — coming soon</Text>
           <Text style={styles.muted}>
-            {canReceivePrivately
-              ? "Yes. Your viewing key is published, so a payer can seal a note the shielded pool can settle."
-              : `Not yet. The shielded pool is deployed on ${pool?.chain.name ?? "this network"}, but the deposit and withdrawal flow is still being built, so a payment to you arrives as a public transfer. Your viewing key is still published, so nothing has to change when the pool goes live.`}
+            No, not today: the shielded pool is paused while CloakPay focuses on paying people by username,
+            and it is labelled “Coming soon” wherever it appears. Payments to you arrive as ordinary transfers
+            to @{username}, and the code behind the pool is still in place for when it returns.
           </Text>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={styles.cardTitle}>Receive from external wallet</Text>
+          {wallet?.address ? (
+            <>
+              <Text style={styles.addressText} selectable>
+                {wallet.address}
+              </Text>
+              <View style={styles.actions}>
+                <Button
+                  title={copied === "address" ? "Copied" : "Copy address"}
+                  variant="secondary"
+                  style={styles.grow}
+                  onPress={() => copy("address", wallet.address ?? "")}
+                />
+              </View>
+              <Text style={styles.muted}>
+                Where funds land when somebody sends HYPE from outside CloakPay. This screen is the only place
+                the app shows an address; sending to an external wallet is paused and labelled “Coming soon”.
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.muted}>No wallet on this account yet.</Text>
+          )}
         </Card>
 
         <Card style={styles.card}>
@@ -196,6 +227,15 @@ const styles = StyleSheet.create({
   fieldGap: { marginTop: space.md },
   created: { marginTop: space.md, gap: 6 },
   linkText: {
+    ...type.small,
+    color: color.ink900,
+    backgroundColor: color.paper100,
+    borderWidth: 1,
+    borderColor: color.lineSoft,
+    borderRadius: radius.sm,
+    padding: space.md,
+  },
+  addressText: {
     ...type.small,
     color: color.ink900,
     backgroundColor: color.paper100,

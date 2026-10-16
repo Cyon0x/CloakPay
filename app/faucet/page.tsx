@@ -1,19 +1,18 @@
+import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
-import { WalletAddressCard } from "@/components/WalletAddressCard";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
-import { activeChain, explorerAddress } from "@/config/chain";
+import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "Faucet" };
 export const dynamic = "force-dynamic";
 
 const STEPS = [
-  "Copy the wallet address below. It is the address CloakPay created for you, and the only one it will ever use.",
+  "Open your Receive page and copy the address under \u201cReceive from external wallet\u201d.",
   "Open the official Elysium testnet faucet. It is run by the Elysium team, not by CloakPay.",
   "Paste your address there and request testnet HYPE. The faucet applies its own rate limit.",
-  "Come back and press Refresh balance. The tokens land in the wallet CloakPay signs with.",
+  "Come back to your dashboard. The balance shown there is read from the chain, so the tokens appear as soon as they land.",
 ];
 
 /**
@@ -21,15 +20,15 @@ const STEPS = [
  *
  * CloakPay operates no faucet, and the chain's faucet is a web service with no
  * documented public API, so there is nothing here to call. Rather than invent a
- * claim, this page does the part that is actually ours: hand over the correct
- * address and show the real balance so the result can be seen.
+ * claim, this page does the part that is actually ours: it explains the steps
+ * and sends the user to the one screen that shows an address.
+ *
+ * The address itself is deliberately not printed here. CloakPay shows an address
+ * on the Receive page and nowhere else, and a second copy on a second page is
+ * exactly the drift that rule exists to prevent.
  */
 export default async function FaucetPage() {
-  const user = await currentUserOrRedirect();
-
-  const [wallet] = await db()<{ address: string }[]>`
-    select address from wallets where user_id = ${user.userId}
-  `;
+  await currentUserOrRedirect();
 
   return (
     <AuthedShell>
@@ -41,48 +40,47 @@ export default async function FaucetPage() {
       <div className="split">
         <Card>
           <div style={{ padding: 22 }}>
-            <p className="table-head">Your wallet address</p>
-            <div style={{ marginTop: 12 }}>
-              <WalletAddressCard
-                address={wallet?.address ?? null}
-                symbol={activeChain.nativeToken.symbol}
-                decimals={activeChain.nativeToken.decimals}
-                explorerUrl={wallet ? explorerAddress(wallet.address) : null}
-              />
-            </div>
-          </div>
-        </Card>
-
-        <div className="stack">
-          <Card>
-            <div style={{ padding: 22 }}>
-              <p className="table-head">How to get testnet {activeChain.nativeToken.symbol}</p>
-              <ol className="faucet-steps">
-                {STEPS.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
+            <p className="table-head">How to get testnet {activeChain.nativeToken.symbol}</p>
+            <ol className="faucet-steps">
+              {STEPS.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <div className="stack-sm" style={{ marginTop: 18 }}>
+              <Link href="/receive" className="btn btn-primary btn-block">
+                <Icon name="receive" size={15} />
+                Get your receive address
+              </Link>
               <a
-                className="btn btn-primary btn-block"
+                className="btn btn-secondary btn-block"
                 href={activeChain.faucetUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                style={{ marginTop: 18 }}
               >
                 <Icon name="external" size={15} />
                 Open the official Elysium faucet
               </a>
-              <p className="tiny muted" style={{ marginTop: 10 }}>
-                {activeChain.faucetUrl}
-              </p>
             </div>
-          </Card>
+            <p className="tiny muted" style={{ marginTop: 10 }}>
+              {activeChain.faucetUrl}
+            </p>
+          </div>
+        </Card>
+
+        <div className="stack">
+          <Notice tone="info" title="Where the address is">
+            Your receive address is on the{" "}
+            <Link className="link" href="/receive">
+              Receive page
+            </Link>
+            . CloakPay keeps addresses to that one screen — payments between CloakPay users are addressed to
+            usernames, so no other page needs one.
+          </Notice>
 
           <Notice tone="info" title="Why there is no claim button here">
             CloakPay does not run a faucet and the Elysium faucet publishes no API, so a button on this page
             could only pretend to work. Requests are rate limited per address by the faucet itself, and
-            nothing in CloakPay can or should bypass that. What CloakPay can do — give you the right address
-            and show the real balance — is what this page does.
+            nothing in CloakPay can or should bypass that.
           </Notice>
         </div>
       </div>

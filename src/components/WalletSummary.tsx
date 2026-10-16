@@ -14,6 +14,9 @@ import { formatWei } from "@/lib/format";
  * transfer code uses. When the read fails the panel says so and offers a retry;
  * it never falls back to a remembered, cached or invented number, because a
  * balance someone might act on must be the balance the chain reports.
+ *
+ * The address arrives so the balance can be read, and does not leave this
+ * function: CloakPay shows an address on the Receive page and nowhere else.
  */
 export function WalletSummary({
   address,
@@ -113,8 +116,11 @@ export function WalletSummary({
             </>
           ) : address ? (
             <>
-              <span className="mono tiny">{`${address.slice(0, 10)}…${address.slice(-6)}`}</span> on Elysium
-              Testnet · {symbol} is the only asset CloakPay holds.
+              Elysium Testnet · {symbol} is the only asset CloakPay holds. Your receive address lives on the{" "}
+              <Link href="/receive" className="link">
+                Receive page
+              </Link>
+              .
             </>
           ) : (
             "No wallet on this account yet."

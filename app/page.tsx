@@ -12,10 +12,9 @@ import { HIDDEN, NEVER, VISIBLE } from "@/config/privacy";
  * The landing page.
  *
  * Only features that are actually running appear here. The shielded pool is
- * built, deployed and verified on testnet, but the deposit and withdrawal flow a
- * user would drive is still being built, so it is described as work in progress
- * rather than as a capability, and the status line under the hero buttons says
- * exactly which half is live.
+ * built, deployed and verified on testnet and is switched off, so the page says
+ * paused rather than describing it as a capability, and the status line under
+ * the hero buttons names what really works today.
  */
 const LIVE = [
   {
@@ -38,17 +37,23 @@ const LIVE = [
   },
   {
     icon: "shield",
-    title: "Privacy in progress",
-    body: "The shielded pool is written, deployed and verified on testnet. The deposit and withdrawal flow is still being built, so private payments are off and every surface says so.",
+    title: "Shielded pool \u2014 coming soon",
+    body: "The pool is written, deployed and verified on testnet, and paused while CloakPay focuses on paying people by username. Nothing pretends an ordinary transfer is private.",
     href: "/privacy",
+  },
+  {
+    icon: "external",
+    title: "External transfer \u2014 coming soon",
+    body: "Sending to a wallet address outside CloakPay is paused. Paying a CloakPay username works, and receiving from an external wallet still does.",
+    href: "/receive",
   },
 ];
 
 const STEPS = [
   { title: "Sign in", body: "Google or X. Those are the only two options and no password is created." },
-  { title: "Pick a username", body: "That becomes your payment address. People pay @you, not 0x8f3a…" },
+  { title: "Pick a username", body: "That is how people pay you. They type @you; there is no address to copy or check." },
   { title: "Send or request", body: "Pay a username, or publish a link that anyone can settle." },
-  { title: "Keep the receipt", body: "Every payment records its real status and links to the transaction that settled it." },
+  { title: "Keep the receipt", body: "Every confirmed payment has a receipt you can download, now or from your transaction history." },
 ];
 
 export default async function LandingPage() {
@@ -100,9 +105,7 @@ export default async function LandingPage() {
                 <span className={`dot ${poolLive ? "dot-ok" : "dot-warn"}`} aria-hidden="true" />
                 {poolLive
                   ? `Shielded pool live on ${activeChain.name}. Chain ${activeChain.chainId}, testnet only.`
-                  : pool === "in-development"
-                    ? `Wallets, usernames, payment links and direct transfers are live on ${activeChain.name}. The shielded pool is deployed, but the deposit and withdrawal flow is still being built, so private payments are not offered yet.`
-                    : `Wallets, usernames, payment links and direct transfers are live on ${activeChain.name}. The shielded pool is built and tested but not deployed, so private payments are not offered yet.`}
+                  : `Wallets, usernames and payment links are live on ${activeChain.name}. Payments go to CloakPay usernames. The shielded pool is paused, and external transfers are paused, both labelled coming soon.`}
               </p>
             </div>
           </div>
@@ -142,8 +145,9 @@ export default async function LandingPage() {
               <p className="eyebrow">Privacy</p>
               <h2>What is actually private</h2>
               <p className="lede">
-                Privacy claims are worthless unless they are precise. This is the design, stated plainly,
-                including the parts it does not hide.
+                Privacy claims are worthless unless they are precise. This is the pool's design, stated
+                plainly — including the parts it does not hide. It is paused today, so nothing below is
+                running.
               </p>
             </div>
             <div className="grid-3" style={{ marginTop: 28 }}>
@@ -175,7 +179,7 @@ export default async function LandingPage() {
 
             <div className="denominations">
               <div>
-                <p className="table-head">Shielded amounts</p>
+                <p className="table-head">Shielded amounts — coming soon</p>
                 <p className="tiny muted" style={{ marginTop: 8, maxWidth: "58ch" }}>
                   Deposits are fixed denominations. A fixed set is what makes an anonymity set mean anything:
                   every note of a given size is interchangeable, so a withdrawal cannot be narrowed down by
@@ -230,9 +234,6 @@ export default async function LandingPage() {
             <Link href="/faq">FAQ</Link>
             <Link href="/privacy/policy">Privacy policy</Link>
             <Link href="/terms">Terms of service</Link>
-            <a href={activeChain.explorerUrl} rel="noreferrer noopener" target="_blank">
-              Explorer
-            </a>
             <a href={activeChain.faucetUrl} rel="noreferrer noopener" target="_blank">
               Faucet
             </a>

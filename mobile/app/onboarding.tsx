@@ -209,10 +209,9 @@ export default function Onboarding() {
             </Card>
             {address ? (
               <Card style={styles.gap}>
-                <Text style={styles.label}>Wallet address</Text>
-                <Mono style={styles.address}>{address}</Mono>
                 <Text style={styles.hint}>
-                  Public. This is what holds your testnet HYPE and what a transfer is signed from.
+                  Your wallet is created. CloakPay does not print the address here: the Receive screen shows
+                  it, under “Receive from external wallet”, for money arriving from outside CloakPay.
                 </Text>
               </Card>
             ) : null}
@@ -247,6 +246,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.lg,
   },
-  address: { fontSize: 13, color: color.ink900 },
   hint: { ...type.tiny, color: color.slate600 },
 });

@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { paymentCode } from "@/lib/codes";
 import { parseToWei } from "@/lib/payments";
 import { denominationById } from "@/config/pool";
+import { shieldedPoolEnabled } from "@/config/features";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,18 @@ export async function POST(request: Request) {
     const parsed = createSchema.safeParse(await request.json());
     if (!parsed.success) return fail(400, "invalid_body", "That link request was not valid.");
     const body = parsed.data;
+
+    // A link's mode is the promise its owner makes about how they will be
+    // paid, and a private one cannot be kept while the pool is paused. Refusing
+    // it here means no payer is ever handed a link whose whole point is
+    // unavailable.
+    if (body.mode === "private" && !shieldedPoolEnabled()) {
+      return fail(
+        409,
+        "shielded_pool_paused",
+        "Private payment links are paused while the shielded pool is off. A link created now asks for an ordinary payment, and says so.",
+      );
+    }
 
     let amountWei: bigint | null = null;
     if (body.denominationId) {

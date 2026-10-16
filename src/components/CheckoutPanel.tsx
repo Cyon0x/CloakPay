@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import { Receipt } from "./payment/parts";
+import { PaymentReceipt } from "@/components/PaymentReceipt";
 import { useSettlement } from "./payment/useSettlement";
-import { explorerTxUrl } from "@/lib/client/chain";
+import { AmountInput } from "./payment/AmountInput";
 import { readBalance } from "@/lib/client/transfer";
 import { isUnlocked } from "@/lib/client/wallet";
 import { formatWei } from "@/lib/format";
+import { validateAmount } from "@/lib/amount";
 
 export interface CheckoutLink {
   code: string;
@@ -45,8 +46,7 @@ export function CheckoutPanel({
   signedIn,
   isOwner,
   walletAddress,
-  poolDeployed,
-  privateReady,
+  payerUsername,
   privateBlocker,
   faucetUrl,
 }: {
@@ -54,15 +54,9 @@ export function CheckoutPanel({
   signedIn: boolean;
   isOwner: boolean;
   walletAddress: string | null;
-  poolDeployed: boolean;
-  /**
-   * Whether the browser can actually complete a private payment on this chain.
-   * A deployed pool is not the same thing: without the deposit and withdrawal
-   * flow there is no way to spend a note, and this panel must not fall through
-   * to a public transfer for a link that asked for a private one.
-   */
-  privateReady: boolean;
-  /** Why a private payment is unavailable, in the shared by-chain wording. */
+  /** The signed-in payer's username, so the receipt can name both parties. */
+  payerUsername: string | null;
+  /** Why a private payment is unavailable, in the shared wording. */
   privateBlocker: string;
   faucetUrl: string;
 }) {
@@ -70,6 +64,9 @@ export function CheckoutPanel({
   const [passphrase, setPassphrase] = useState("");
   const [balance, setBalance] = useState<bigint | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  /** Only used when the link leaves the amount to the payer. */
+  const [amount, setAmount] = useState("");
 
   useEffect(() => {
     if (!walletAddress) return;
@@ -78,20 +75,28 @@ export function CheckoutPanel({
 
   const amountWei = link.amountWei ? BigInt(link.amountWei) : 0n;
   const privateRequested = link.mode === "private";
+  // A link with no amount asks the payer to choose one. The validator is the
+  // same one the send form uses, so a figure accepted there is accepted here.
+  const freeAmount = !link.amountWei;
+  const amountCheck = validateAmount(amount, { decimals: 18, symbol: "HYPE", balanceWei: balance });
+  const payableWei = freeAmount ? (amountCheck.ok ? amountCheck.wei : null) : amountWei;
 
   if (settlement.state.phase === "confirmed" || settlement.state.phase === "submitted") {
     const { intent, txHash } = settlement.state;
     return (
       <Card>
         <div style={{ padding: 24 }}>
-          <Receipt
-            amountLabel={formatWei(BigInt(intent.amountWei))}
-            txHash={txHash}
-            explorerUrl={explorerTxUrl(txHash)}
+          <PaymentReceipt
+            receiptId={intent.paymentId}
             status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
-            blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
-            toLabel={`@${link.recipientUsername}`}
-            privacy={intent.privacy}
+            fromUsername={payerUsername ?? "you"}
+            toUsername={intent.recipientUsername ?? link.recipientUsername}
+            amountWei={intent.amountWei}
+            symbol="HYPE"
+            createdAt={startedAt ?? new Date().toISOString()}
+            txHash={txHash}
+            chainName="Elysium Testnet"
+            downloadable={settlement.state.phase === "confirmed"}
           />
           <div className="row" style={{ gap: 8, marginTop: 18 }}>
             <Link href="/activity" className="btn btn-secondary btn-sm">
@@ -119,10 +124,24 @@ export function CheckoutPanel({
           </div>
         </div>
 
-        <div className="amount-display" style={{ marginTop: 20 }}>
-          <span className="mono">{link.amountWei ? formatWei(amountWei) : "—"}</span>
-          <span className="amount-display-unit">HYPE</span>
-        </div>
+        {freeAmount ? (
+          <div style={{ marginTop: 20 }}>
+            <AmountInput
+              id="checkout-amount"
+              value={amount}
+              onChange={setAmount}
+              symbol="HYPE"
+              balanceWei={balance}
+              label="Amount"
+              hint="This request leaves the amount to you."
+            />
+          </div>
+        ) : (
+          <div className="amount-display" style={{ marginTop: 20 }}>
+            <span className="mono">{formatWei(amountWei)}</span>
+            <span className="amount-display-unit">HYPE</span>
+          </div>
+        )}
 
         {link.title ? <p style={{ marginTop: 14, fontWeight: 500 }}>{link.title}</p> : null}
         {link.description ? <p className="tiny muted" style={{ marginTop: 6 }}>{link.description}</p> : null}
@@ -167,10 +186,11 @@ export function CheckoutPanel({
             <Notice tone="warn" title="Your wallet is not set up">
               Finish onboarding to create a wallet before paying.
             </Notice>
-          ) : privateRequested && !privateReady ? (
+          ) : privateRequested ? (
             <Notice tone="warn" title="This link asks for a private payment">
-              Its owner requested a shielded payment. {privateBlocker} CloakPay will not settle it as a
-              public transfer, because that would not be the payment that was asked for.
+              Its owner asked to be paid through the shielded pool, and private payments are paused.{" "}
+              {privateBlocker} CloakPay will not settle it as an ordinary transfer, because that is not the
+              payment that was requested — ask the owner for a new link.
             </Notice>
           ) : settlement.state.phase === "failed" ? (
             <>
@@ -228,23 +248,24 @@ export function CheckoutPanel({
           ) : (
             <>
               <p className="tiny muted">
-                Paying from <span className="mono">{walletAddress.slice(0, 10)}…</span>
+                Paying <span className="mono">@{link.recipientUsername}</span> from your CloakPay account.
               </p>
               <button
                 className="btn btn-primary btn-block"
                 style={{ marginTop: 12 }}
-                disabled={settlement.state.phase === "preparing"}
-                onClick={() =>
-                  settlement.prepare({
+                disabled={settlement.state.phase === "preparing" || payableWei === null}
+                onClick={async () => {
+                  const intent = await settlement.prepare({
                     linkCode: link.code,
-                    denominationId: link.denominationId ?? "",
+                    amountWei: payableWei?.toString(),
                     // The link's owner chose how they want to be paid, and the
                     // server refuses a mismatch. Sending anything other than
                     // the link's own mode would just be a request to break the
                     // promise the link makes.
                     privacy: link.mode === "private" ? "private" : "public",
-                  })
-                }
+                  });
+                  if (intent) setStartedAt(new Date().toISOString());
+                }}
               >
                 {settlement.state.phase === "preparing" ? "Preparing…" : "Continue to payment"}
               </button>
@@ -255,15 +276,13 @@ export function CheckoutPanel({
           )}
         </div>
 
-        {!poolDeployed ? (
-          <p className="tiny muted" style={{ marginTop: 16 }}>
-            Testnet only. Get HYPE from the{" "}
-            <a className="link" href={faucetUrl} target="_blank" rel="noreferrer noopener">
-              Elysium faucet
-            </a>
-            .
-          </p>
-        ) : null}
+        <p className="tiny muted" style={{ marginTop: 16 }}>
+          Testnet only. Get HYPE from the{" "}
+          <a className="link" href={faucetUrl} target="_blank" rel="noreferrer noopener">
+            Elysium faucet
+          </a>
+          .
+        </p>
       </div>
     </Card>
   );

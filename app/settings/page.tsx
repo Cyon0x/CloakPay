@@ -4,8 +4,9 @@ import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { listIdentities } from "@/lib/auth/accounts";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
-import { explorerAddress } from "@/config/chain";
-import { formatWei } from "@/lib/payments";
+import { ComingSoon } from "@/components/ComingSoon";
+import { poolStatusSentence } from "@/config/pool";
+import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -15,10 +16,6 @@ export default async function SettingsPage() {
   const identities = await listIdentities(user.userId);
   const [wallet] = await db()<{ address: string; viewing_key_id: string | null }[]>`
     select address, viewing_key_id from wallets where user_id = ${user.userId}
-  `;
-  const [claimable] = await db()<{ unspent: number }[]>`
-    select count(*) filter (where status = 'unspent')::int as unspent
-    from shielded_notes where user_id = ${user.userId}
   `;
 
   return (
@@ -65,23 +62,18 @@ export default async function SettingsPage() {
                 <div className="stack-sm" style={{ marginTop: 12 }}>
                   <div className="row-between">
                     <span style={{ fontSize: 14 }}>Wallet</span>
-                    <span className="mono tiny">{wallet ? `${wallet.address.slice(0, 12)}…` : "none"}</span>
+                    <span className="tiny muted">
+                      {wallet ? "set up and self-custodial" : "not set up yet"}
+                    </span>
                   </div>
-                  {wallet ? (
-                    <a className="tiny link" href={explorerAddress(wallet.address)} target="_blank" rel="noreferrer noopener">
-                      Open wallet on the explorer
-                    </a>
-                  ) : null}
-                  <div className="row-between">
-                    <span style={{ fontSize: 14 }}>Viewing key</span>
-                    <Badge kind={wallet?.viewing_key_id ? "private" : "setup"}>
-                      {wallet?.viewing_key_id ? "Registered" : "Not set"}
-                    </Badge>
-                  </div>
-                  <div className="row-between">
-                    <span style={{ fontSize: 14 }}>Unclaimed notes</span>
-                    <span className="mono tiny">{claimable?.unspent ?? 0}</span>
-                  </div>
+                  <p className="tiny muted">
+                    The address this wallet receives at is on the{" "}
+                    <Link className="link" href="/receive">
+                      Receive page
+                    </Link>
+                    . It is the only place in CloakPay that shows it: payments here are addressed to
+                    usernames, not to addresses.
+                  </p>
                 </div>
                 <Notice tone="warn" title="Recovery">
                   Your 12-word phrase is the only way to restore this wallet. Your passphrase only unlocks
@@ -100,8 +92,18 @@ export default async function SettingsPage() {
                   email, or account id. Visibility controls are stored per account and default to the most
                   private setting.
                 </p>
+                <p className="tiny muted" style={{ marginTop: 10 }}>
+                  CloakPay keeps the link between your username and your wallet to itself, but the payments
+                  themselves are ordinary transfers on a public test network: they can be seen on chain.
+                </p>
               </div>
             </Card>
+            <ComingSoon
+              title="Shielded Pool"
+              icon="shield"
+              body="Private payments are paused, so your viewing key is not in use and no notes are being created or spent."
+              note={poolStatusSentence(activeChain.chainId)}
+            />
             <Card>
               <div style={{ padding: 20 }}>
                 <p className="table-head">Notifications</p>

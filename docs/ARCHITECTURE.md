@@ -110,8 +110,31 @@ log, or a URL.
 
 ## Payments
 
-Two settlement paths exist and they are labelled differently everywhere,
-including in the database, because they have different privacy properties.
+CloakPay has one live payment: paying another registered user by username. It
+settles as an ordinary native HYPE transfer, and it is labelled `public`
+everywhere, including in the database, because that is what it is.
+
+**Where the addresses are.** A native transfer has to be signed against a
+destination address, so two of them move through the system: the payer's, which
+the browser unseals to sign with, and the recipient's, which
+`/api/payments/intent` resolves from the username and returns to the
+authenticated payer so the transaction can be built. Neither is rendered. The
+only screen that prints an address is `/receive`, and it prints the signed-in
+user's own, under "Receive from external wallet", for money arriving from
+outside CloakPay. Everything else — dashboard, settings, Send, activity,
+transactions, links, receipts, the public profile — names people by username.
+
+```ts
+// src/config/features.ts — the two paths that are paused.
+export const FEATURES: PaymentFeatures = { externalTransfers: false, shieldedPool: false };
+```
+
+**Paused, not deleted.** Both switches are read by the server as well as the
+client, so a stale tab or a hand-made request meets the same refusal as the
+interface, and every refusal happens before anything is written: no payment row,
+no burned link use. The contracts, circuits, `src/lib/client/shielded.ts`, the
+`shielded_notes` schema and `scripts/shielded-e2e.mjs` are all intact; re-enabling
+is a flag and a screen rather than a rebuild.
 
 **Direct transfer (`privacy = 'public'`)** is a normal native HYPE transfer,
 signed in the browser by the user's own key and broadcast straight to the
@@ -119,14 +142,34 @@ Elysium RPC. The server never holds a key and never signs. It only records the
 attempt and then confirms it against a real receipt. Sender, recipient, amount
 and timing are all visible on chain, and the UI says so before the user confirms.
 
-**Shielded settlement (`privacy = 'private'`)** deposits into the pool, carries
-a commitment, and pays out through a Groth16 proof. The contract verifies the
-proof and enforces the nullifier itself. This path is refused with a named error
-while the pool has no recorded deployment, so it can never silently degrade into
-the public path.
+**Shielded settlement (`privacy = 'private'`)** is switched off. When it was live
+it deposited into the pool, carried a commitment, and paid out through a Groth16
+proof that the contract verifies and enforces the nullifier for. It is refused
+with a named error while the pool is paused, so it can never silently degrade
+into the public path.
+
+**External transfer** is the other paused path: a public transfer to a wallet
+address that is not a CloakPay account. Its refusal is `external_transfer_paused`
+and it is refused wherever an address is supplied.
 
 The server is never the authority on whether a proof is valid. It has no verifier
 and trusts no client claim about one.
+
+### Receipts
+
+A receipt is a view of a `payments` row, not a second record of it.
+`src/lib/receipt/data.ts` loads one row for one viewer, and the viewer is part of
+the query: a payment that does not name the caller is indistinguishable from one
+that does not exist. `PaymentReceipt` renders it in the app — the send flow shows
+it the moment the chain confirms, and `/transactions/[id]` shows the identical
+component when an old receipt is reopened — and `renderReceiptPdf` draws the same
+fields into a PDF for `GET /api/payments/:id/receipt`.
+
+Two rules hold across all three: a completed receipt exists only for a
+`confirmed` payment, and no receipt contains a wallet address. The transaction
+hash is kept, because a receipt is also a reconciliation document, and it is
+printed as plain text rather than as an explorer link so the document stands on
+its own.
 
 ### Settlement order
 

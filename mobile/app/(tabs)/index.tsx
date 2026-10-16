@@ -90,9 +90,7 @@ export default function Dashboard() {
         <Text style={styles.handle}>@{user?.username}</Text>
         <Text style={styles.heading}>{user?.displayName ? `Hello, ${user.displayName}` : "Your account"}</Text>
         <Text style={styles.sub}>
-          {wallet?.address
-            ? `Wallet ${wallet.address.slice(0, 10)}…${wallet.address.slice(-6)} on ${activeChain.name}`
-            : "No wallet on this account yet."}
+          {wallet ? `Payments on ${activeChain.name}, addressed to your username.` : "No wallet on this account yet."}
         </Text>
 
         <View style={styles.actions}>

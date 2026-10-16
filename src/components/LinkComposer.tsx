@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { AMOUNT_PRESETS, validateAmount } from "@/lib/amount";
-import { SettlementPicker } from "./payment/parts";
 import { AmountInput } from "./payment/AmountInput";
+import { ComingSoon } from "@/components/ComingSoon";
 import { CopyField } from "./CopyField";
 import { QrCode } from "./QrCode";
 
@@ -19,15 +19,12 @@ import { QrCode } from "./QrCode";
  * all of which the owner typed on this screen.
  */
 export function LinkComposer({
-  denominations,
-  privateReady,
   poolSentence,
   symbol,
   decimals,
   appUrl,
 }: {
-  denominations: { id: string; label: string; wei: string }[];
-  privateReady: boolean;
+  /** Why a private link is not on offer, in the shared by-chain wording. */
   poolSentence: string;
   symbol: string;
   decimals: number;
@@ -37,25 +34,15 @@ export function LinkComposer({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [mode, setMode] = useState<"private" | "public">(privateReady ? "private" : "public");
   const [oneTime, setOneTime] = useState(false);
   const [expires, setExpires] = useState("0");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
 
-  const denominationWei = useMemo(
-    () => denominations.map((item) => BigInt(item.wei)),
-    [denominations],
-  );
-  const denominationLabels = useMemo(
-    () => denominations.map((item) => item.label.split(" ")[0]),
-    [denominations],
-  );
   const amountCheck = validateAmount(amount, {
     decimals,
     symbol,
-    allowedWei: mode === "private" ? denominationWei : null,
   });
   // An empty amount is a link that lets the payer choose. Anything typed has to
   // be a real amount, so a typo cannot become a silently different request.
@@ -76,7 +63,11 @@ export function LinkComposer({
           title: title.trim() || undefined,
           description: description.trim() || undefined,
           amount: amount.trim() || undefined,
-          mode,
+          // A link makes no claim about how it settles, because the only way
+          // to settle one now is an ordinary transfer between two CloakPay
+          // accounts. `record` is that statement, and the server refuses a
+          // request for a private link while the pool is paused.
+          mode: "record",
           reusable: !oneTime,
           maxUses: oneTime ? 1 : undefined,
           expiresInHours: expires === "0" ? undefined : Number(expires),
@@ -165,24 +156,16 @@ export function LinkComposer({
             symbol={symbol}
             decimals={decimals}
             balanceWei={null}
-            allowedWei={mode === "private" ? denominationWei : null}
-            presets={mode === "private" ? denominationLabels : AMOUNT_PRESETS}
+            presets={AMOUNT_PRESETS}
             label={`Amount in ${symbol}`}
-            hint={
-              mode === "private"
-                ? "A private link may only request one of the pool's fixed sizes."
-                : "Leave this empty for a link the payer decides the amount on."
-            }
+            hint="Leave this empty for a link the payer decides the amount on."
           />
 
-          <SettlementPicker
-            value={mode}
-            onChange={(next) => {
-              setMode(next);
-              setAmount("");
-            }}
-            privateReady={privateReady}
-            privateBlocker={poolSentence}
+          <ComingSoon
+            title="Private payment links"
+            icon="shield"
+            body="A link that asks to be paid through the shielded pool is paused. Links created now request an ordinary payment between CloakPay accounts, and say so on the payment page."
+            note={poolSentence}
           />
 
           <fieldset className="fieldset">
@@ -216,12 +199,6 @@ export function LinkComposer({
 
       <div className="stack">
         {error ? <Notice tone="error">{error}</Notice> : null}
-        {!privateReady ? (
-          <Notice tone="warn" title="Private links are unavailable">
-            {poolSentence} Until then, links can only request a direct transfer, and the payer is told exactly
-            that.
-          </Notice>
-        ) : null}
         <Card>
           <div style={{ padding: 22 }}>
             <p className="table-head">What a link can carry</p>

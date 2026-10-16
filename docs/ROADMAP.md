@@ -45,8 +45,24 @@ identity keyed on stable provider ids, tokens never persisted.
 with PBKDF2-SHA256 (600k) and AES-256-GCM. No plaintext key material anywhere in
 the database, the logs, or a URL.
 
-**Payments.** Real native HYPE transfers signed in the browser and broadcast to
-the Elysium RPC, with receipts confirmed against actual transaction receipts.
+**Payments.** One flow: pay a registered CloakPay user by username. The username
+is resolved server-side against the unique case-insensitive index, the browser
+signs a real native HYPE transfer and broadcasts it to the Elysium RPC, and the
+row is confirmed only against an actual transaction receipt. No wallet address is
+typed, rendered or printed anywhere in it.
+
+**Receipts.** A receipt is a view of one payment row for the two people on it.
+The send flow shows it the moment the chain confirms, `/transactions/[id]`
+reopens it from the history, and `GET /api/payments/:id/receipt` returns the same
+document as a PDF. Issued only for a confirmed payment, never carrying a wallet
+address, and authorized by the query that loads the row.
+
+**Two paused features.** External Transfer and the Shielded Pool are both
+labelled "Coming soon" and refused in the interface *and* in the API, before
+anything is written. `src/config/features.ts` is the single switch. Re-enabling
+either is a flag and a screen: the contracts, the circuits, the client module,
+the schema and the end-to-end shielded check are all still here and still
+passing.
 
 **Links and QR.** Fixed or open amounts, expiry, usage limits, one-time links,
 native share, locally rendered QR codes.
@@ -56,6 +72,13 @@ icon and favicon from the supplied master artwork, and one design token set in
 `app/globals.css`.
 
 ## Partial
+
+**Paused features, and the surface around them.** External Transfer and the
+Shielded Pool are switched off rather than unfinished: `scripts/shielded-e2e.mjs`
+still drives the private flow end to end on testnet, and `npm run privacy:check`
+now asserts that every paused entry point refuses. What has not been re-verified
+since the pause is the paused *screens* themselves — the pool panel is kept but
+not rendered, so there is no browser test driving it today.
 
 **Untested in a browser.** The private-payment surface is exercised through the
 real client module, the real API and the real contracts, but not by clicking.

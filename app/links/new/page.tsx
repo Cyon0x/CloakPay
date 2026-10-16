@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui";
 import { LinkComposer } from "@/components/LinkComposer";
 import { currentUserOrRedirect } from "@/lib/session";
 import { env } from "@/lib/env";
-import { DENOMINATIONS, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
+import { poolStatusSentence } from "@/config/pool";
 import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "New payment link" };
@@ -25,12 +25,6 @@ export default async function NewLinkPage() {
         }
       />
       <LinkComposer
-        denominations={DENOMINATIONS.map((denomination) => ({
-          id: denomination.id,
-          label: denomination.label,
-          wei: denomination.wei.toString(),
-        }))}
-        privateReady={privatePaymentsAvailable(activeChain.chainId)}
         poolSentence={poolStatusSentence(activeChain.chainId)}
         symbol={activeChain.nativeToken.symbol}
         decimals={activeChain.nativeToken.decimals}

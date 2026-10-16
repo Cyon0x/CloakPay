@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSealedWallet, stashSecret, addressFromMnemonic } from "@/lib/client/wallet";
 import { Notice } from "./ui";
@@ -238,7 +239,11 @@ export function OnboardingWizard({
           </div>
           {address ? (
             <p className="tiny muted" style={{ marginTop: 10 }}>
-              Wallet address <span className="mono">{address}</span>
+              Your wallet is created. Its receive address is on the{" "}
+              <Link className="link" href="/receive">
+                Receive page
+              </Link>{" "}
+              when you need it — CloakPay does not print it here.
             </p>
           ) : null}
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={finish} disabled={busy}>

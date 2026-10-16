@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Clipboard from "expo-clipboard";
 import { api, APP_URL } from "../../src/api";
 import { useAuth } from "../../src/auth";
 import { Badge, Button, Card, Field, Loading, Mono, Notice } from "../../src/components/ui";
@@ -40,7 +39,6 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
 
@@ -127,21 +125,17 @@ export default function Settings() {
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Wallet</Text>
-          {wallet?.address ? (
+          {wallet ? (
             <>
-              <Text style={styles.label}>Address</Text>
-              <Mono style={styles.address}>{wallet.address}</Mono>
-              <Pressable
-                accessibilityRole="button"
-                onPress={async () => {
-                  await Clipboard.setStringAsync(wallet.address ?? "");
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1600);
-                }}
-                style={styles.inline}
-              >
-                <Text style={styles.inlineText}>{copied ? "Copied" : "Copy address"}</Text>
-              </Pressable>
+              <View style={styles.kv}>
+                <Text style={styles.label}>Status</Text>
+                <Text style={styles.kvValue}>Self-custodial</Text>
+              </View>
+              <Text style={styles.hint}>
+                The address this wallet receives at is on the Receive screen, under “Receive from external
+                wallet”. It is the only place CloakPay shows one: payments here are addressed to usernames,
+                not to addresses.
+              </Text>
               <View style={styles.kv}>
                 <Text style={styles.label}>Viewing key</Text>
                 <Text style={styles.kvValue}>{wallet.viewingKeyId ? "Published" : "Missing"}</Text>
@@ -276,7 +270,6 @@ const styles = StyleSheet.create({
   cardTitle: { ...type.heading, color: color.ink950, marginBottom: 6 },
   label: { ...type.label, color: color.slate500 },
   hint: { ...type.tiny, color: color.slate600, marginTop: space.sm },
-  address: { fontSize: 12.5, color: color.ink900, marginTop: 4 },
   kv: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5, gap: space.md },
   kvValue: { fontSize: 14, fontWeight: "500", color: color.ink900 },
   fieldGap: { marginTop: space.md },

@@ -3,6 +3,12 @@
 /**
  * The shielded pool, as the user operates it.
  *
+ * NOT RENDERED while the pool is paused (`src/config/features.ts`). It is kept
+ * whole and unchanged so the feature can be switched back on, and it is safe to
+ * keep because nothing imports it: the deposit, list and withdraw controls have
+ * no route to them from the interface, and the API refuses a private intent
+ * regardless of what any client sends.
+ *
  * Three actions, and nothing decorative:
  *
  *   * deposit  — move a fixed size of HYPE into the pool and keep the note;

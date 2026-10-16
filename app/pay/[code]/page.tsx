@@ -103,8 +103,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
             signedIn={Boolean(viewer)}
             isOwner={viewer?.userId === link.owner_user_id}
             walletAddress={wallet?.address ?? null}
-            poolDeployed={Boolean(getPoolDeployment(activeChain.chainId))}
-            privateReady={privatePaymentsAvailable(activeChain.chainId)}
+            payerUsername={viewer?.username ?? null}
             privateBlocker={poolStatusSentence(activeChain.chainId)}
             faucetUrl={activeChain.faucetUrl}
           />
@@ -115,8 +114,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ code:
               <ul className="stack-sm" style={{ marginTop: 10, paddingLeft: 18, color: "var(--color-slate-700)" }}>
                 <li>The link shows only what its owner chose to disclose.</li>
                 <li>
-                  Your wallet address is never sent to the recipient&apos;s profile. It is visible on chain
-                  if the transfer is public, because every transfer is.
+                  The payment goes from your CloakPay account to theirs. Neither side is shown an address —
+                  not on this page, and not on the receipt.
                 </li>
                 <li>The link never contains a key or a spending secret.</li>
               </ul>

@@ -3,7 +3,8 @@ import { TopBar } from "@/components/Nav";
 import { currentUser } from "@/lib/session";
 import { Notice } from "@/components/ui";
 import { activeChain } from "@/config/chain";
-import { getPoolDeployment, poolStatus } from "@/config/pool";
+import { getPoolDeployment, poolStatus, poolStatusSentence } from "@/config/pool";
+import { shieldedPoolEnabled } from "@/config/features";
 
 export const metadata = { title: "How it works" };
 
@@ -34,7 +35,9 @@ export const dynamic = "force-dynamic";
 
 export default async function HowItWorksPage() {
   const user = await currentUser();
-  const poolLive = poolStatus(activeChain.chainId) === "ready";
+  const status = poolStatus(activeChain.chainId);
+  const poolLive = status === "ready";
+  const paused = !shieldedPoolEnabled() && Boolean(getPoolDeployment(activeChain.chainId));
   const deployment = getPoolDeployment(activeChain.chainId);
   return (
     <div className="app-shell">
@@ -49,7 +52,13 @@ export default async function HowItWorksPage() {
           </p>
 
           <div style={{ marginTop: 22 }}>
-            {poolLive ? (
+            {paused ? (
+              <Notice tone="warn" title="Paused">
+                {poolStatusSentence(activeChain.chainId)} What CloakPay does today is pay another CloakPay
+                user by username, as an ordinary transfer. The steps below describe the pool as built, not as
+                offered.
+              </Notice>
+            ) : poolLive ? (
               <Notice tone="ok" title="In service">
                 The pool is deployed on {activeChain.name} at{" "}
                 <span className="mono">{deployment?.pool}</span>. Private payments are open.

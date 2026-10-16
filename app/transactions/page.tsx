@@ -5,8 +5,7 @@ import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
-import { activeChain, explorerTx } from "@/config/chain";
-import { poolStatus } from "@/config/pool";
+import { activeChain } from "@/config/chain";
 
 export const metadata = { title: "All transactions" };
 export const dynamic = "force-dynamic";
@@ -15,8 +14,9 @@ export const dynamic = "force-dynamic";
  * The complete ledger.
  *
  * Activity is the short feed you land on; this is every row CloakPay holds for
- * the account, with the on-chain reference for each one so any claim on this
- * page can be checked against the explorer rather than taken on trust.
+ * the account, with the status the network reported and a receipt for every
+ * payment that confirmed. A receipt can be reopened from here at any time,
+ * which is the point of keeping the ledger rather than a feed.
  */
 export default async function TransactionsPage() {
   const user = await currentUserOrRedirect();
@@ -53,7 +53,7 @@ export default async function TransactionsPage() {
     <AuthedShell>
       <PageHeader
         title="All transactions"
-        subtitle="Every payment on this account, with the transaction that settled it. Nothing here is estimated."
+        subtitle="Every payment on this account, with its real status and its receipt. Nothing here is estimated."
         actions={
           <Link href="/activity" className="btn btn-secondary btn-sm">
             Activity feed
@@ -63,9 +63,6 @@ export default async function TransactionsPage() {
 
       <p className="tiny muted" style={{ marginBottom: 14 }}>
         {rows.length} recorded · {settled} confirmed · {pending} awaiting confirmation
-        {poolStatus(activeChain.chainId) === "ready"
-          ? ""
-          : " · pool deposits and withdrawals will appear here once private payments open"}
       </p>
 
       {rows.length === 0 ? (
@@ -101,19 +98,15 @@ export default async function TransactionsPage() {
                     {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"}{" "}
                     {activeChain.nativeToken.symbol}
                   </span>
-                  {row.tx_hash ? (
-                    <a
-                      className="tiny link row"
-                      style={{ gap: 4 }}
-                      href={explorerTx(row.tx_hash)}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      <Icon name="external" size={12} />
-                      {row.tx_hash.slice(0, 10)}…
-                    </a>
+                  {row.status === "confirmed" ? (
+                    <Link className="btn btn-secondary btn-sm" href={`/transactions/${row.id}`}>
+                      <Icon name="download" size={13} />
+                      Receipt
+                    </Link>
                   ) : (
-                    <span className="tiny muted">no on-chain reference</span>
+                    <span className="tiny muted">
+                      {row.tx_hash ? "awaiting confirmation" : "nothing on chain yet"}
+                    </span>
                   )}
                 </div>
               </li>

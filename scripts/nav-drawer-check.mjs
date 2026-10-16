@@ -324,6 +324,49 @@ try {
     JSON.stringify(publicPages),
   );
 
+  // ── the paused features, and the one address ──────────────────────────────
+  //
+  // Read back from the rendered page rather than from the markup. Passing an
+  // address into a client component so it can read the balance is not the same
+  // as printing one, and only the rendered text can tell the two apart.
+  console.log("\nwhat the interface shows");
+  const withoutAddress = ["/dashboard", "/send", "/settings", "/activity", "/transactions", "/links"];
+  const addressShown = {};
+  for (const path of [...withoutAddress, "/receive"]) {
+    await visit(path);
+    addressShown[path] = await evaluate(`document.body.innerText.includes('0x4444')`);
+  }
+  record(
+    "the Receive page is the only screen that shows the wallet address",
+    addressShown["/receive"] === true && withoutAddress.every((path) => addressShown[path] === false),
+    JSON.stringify(addressShown),
+  );
+
+  const paused = await evaluate(`(async () => {
+    const out = {};
+    for (const path of ['/dashboard', '/send', '/privacy']) {
+      const html = await (await fetch(path)).text();
+      out[path] = {
+        shield: /Shielded Pool/.test(html),
+        external: /External Transfer/.test(html),
+        soon: /Coming soon/i.test(html),
+      };
+    }
+    return out;
+  })()`);
+  record(
+    "the dashboard and the send page both mark both paused features as coming soon",
+    ["/dashboard", "/send"].every(
+      (path) => paused[path]?.shield === true && paused[path]?.external === true && paused[path]?.soon === true,
+    ),
+    JSON.stringify(paused),
+  );
+  record(
+    "the privacy page marks the pool as coming soon",
+    paused["/privacy"]?.shield === true && paused["/privacy"]?.soon === true,
+    JSON.stringify(paused["/privacy"]),
+  );
+
   console.log("\nsigned-out routing");
   // Log out the way the drawer does -- a same-origin POST to the sign-out route
   // -- rather than by throwing the cookie away, so revocation itself is

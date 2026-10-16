@@ -4,7 +4,6 @@ import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
-import { explorerTx } from "@/config/chain";
 
 export const metadata = { title: "Activity" };
 export const dynamic = "force-dynamic";
@@ -36,7 +35,7 @@ export default async function ActivityPage() {
       <>
         <PageHeader
           title="Activity"
-          subtitle="Every payment you sent or received. Private payments carry a Private badge; ordinary transfers are labelled Public."
+          subtitle="Every payment you sent or received, with its real status. Confirmed payments have a receipt you can open."
         />
         {rows.length === 0 ? (
           <EmptyState
@@ -67,10 +66,12 @@ export default async function ActivityPage() {
                       {row.direction === "sent" ? "−" : "+"}
                       {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"} HYPE
                     </p>
-                    {row.tx_hash ? (
-                      <a className="tiny link" href={explorerTx(row.tx_hash)} target="_blank" rel="noreferrer noopener">
-                        Explorer
-                      </a>
+                    {row.status === "confirmed" ? (
+                      <Link className="tiny link" href={`/transactions/${row.id}`}>
+                        Receipt
+                      </Link>
+                    ) : row.tx_hash ? (
+                      <span className="tiny muted">Awaiting confirmation</span>
                     ) : (
                       <span className="tiny muted">No on-chain record yet</span>
                     )}
@@ -81,9 +82,9 @@ export default async function ActivityPage() {
           </Card>
         )}
         <p className="tiny muted" style={{ marginTop: 16 }}>
-          A private payment has no single public transfer that corresponds to it. Where a transaction hash
-          exists it is the deposit into the pool; the withdrawal that pays the recipient is a separate
-          transaction the chain cannot connect to it.
+          A payment here is an ordinary transfer on a public test network, so it is visible on chain to
+          anyone who looks. CloakPay keeps the link between a username and an address to itself, which is why
+          this page and your receipts name people by username.
         </p>
       </>
     </AuthedShell>

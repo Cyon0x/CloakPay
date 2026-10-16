@@ -1,5 +1,6 @@
 import type { ContractAddress } from "./chain";
 import recordedDeployments from "./pool-deployments.json";
+import { shieldedPoolEnabled } from "./features";
 
 /**
  * Shielded pool configuration.
@@ -106,27 +107,37 @@ export const SHIELDED_CLIENT_READY = true;
 /**
  * The only predicate the payment flows should ask. True means a private
  * payment can actually be executed, not merely that a contract exists.
+ *
+ * The client flow being able to spend a note is not the same as CloakPay
+ * offering the feature: the pool is switched off in `src/config/features.ts`
+ * while username-to-username payments are the whole product, and this returns
+ * false for as long as that is the case. The contracts, the circuits and the
+ * client flow underneath are untouched.
  */
 export function privatePaymentsAvailable(chainId: number): boolean {
-  return SHIELDED_CLIENT_READY && poolIsDeployed(chainId);
+  return SHIELDED_CLIENT_READY && shieldedPoolEnabled() && poolIsDeployed(chainId);
 }
 
-export type PoolStatus = "ready" | "in-development" | "not-deployed";
+export type PoolStatus = "ready" | "paused" | "in-development" | "not-deployed";
 
 /**
- * Three honest states, so every surface can say the same true thing:
+ * Honest states, so every surface can say the same true thing:
+ *   paused          the pool exists and works, and CloakPay is not offering it
  *   ready           a pool is deployed and the client flow can spend a note
  *   in-development  a pool is deployed, the browser flow is still being built
  *   not-deployed    no pool address has been recorded for this chain
  */
 export function poolStatus(chainId: number): PoolStatus {
   if (!poolIsDeployed(chainId)) return "not-deployed";
+  if (!shieldedPoolEnabled()) return "paused";
   return SHIELDED_CLIENT_READY ? "ready" : "in-development";
 }
 
 /** One sentence describing the pool, shared by every screen that mentions it. */
 export function poolStatusSentence(chainId: number): string {
   switch (poolStatus(chainId)) {
+    case "paused":
+      return "The shielded pool is paused while CloakPay focuses on payments between CloakPay users. It will return in a future update. Nothing has been deleted: the contracts, the notes and the proofs are all still here, and no payment is ever quietly settled as a private one in the meantime.";
     case "ready":
       return "The shielded pool is live and private payments are open.";
     case "in-development":

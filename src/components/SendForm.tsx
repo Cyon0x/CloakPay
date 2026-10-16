@@ -1,54 +1,58 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import {
-  AddressPicker,
-  PoolUnavailableNotice,
-  Receipt,
-  RecipientPicker,
-  SettlementPicker,
-  type Recipient,
-} from "./payment/parts";
+import { ComingSoon } from "@/components/ComingSoon";
+import { PaymentReceipt } from "@/components/PaymentReceipt";
+import { RecipientPicker, type Recipient } from "./payment/parts";
 import { AmountInput } from "./payment/AmountInput";
 import { useSettlement } from "./payment/useSettlement";
 import { estimateNativeTransfer, readBalance, type FeeEstimate } from "@/lib/client/transfer";
 import { isUnlocked } from "@/lib/client/wallet";
-import { explorerTxUrl } from "@/lib/client/chain";
+import { validateAmount } from "@/lib/amount";
 import { formatWei } from "@/lib/format";
-import { AMOUNT_PRESETS, parseAmount, validateAmount } from "@/lib/amount";
-import { validateExternalAddress } from "@/lib/address";
 
 export interface SendFormProps {
+  /**
+   * The signed-in user's own wallet address.
+   *
+   * This is the wallet CloakPay signs with, and it is used here for exactly two
+   * things: reading the balance and estimating the fee. It is never rendered.
+   * The recipient's address arrives from the settlement endpoint for the same
+   * internal purpose and is never rendered either.
+   */
   walletAddress: string | null;
-  /** The pool is deployed *and* the client can spend a note. */
-  privateReady: boolean;
-  /** One accurate sentence about the pool, from the config single source of truth. */
-  poolSentence: string;
-  faucetUrl: string;
-  denominations: { id: string; label: string; wei: string }[];
+  senderUsername: string;
   symbol: string;
   decimals: number;
+  faucetUrl: string;
+  /** A username from a `?to=` link, pre-filled into the picker. */
   initialRecipient?: string;
 }
 
-type Mode = "private" | "external";
-
+/**
+ * Paying another CloakPay user by username.
+ *
+ * One flow, and the whole of it: pick a username, type an amount, review who
+ * and how much, sign, and keep the receipt. No wallet address is typed, shown,
+ * or needed at any point — CloakPay resolves the username to the account it
+ * belongs to on the server, and the settlement endpoint hands the browser a
+ * destination only so the transaction can be signed.
+ *
+ * The payment itself is an ordinary native HYPE transfer on Elysium, signed in
+ * this browser. That is worth saying out loud on the review screen: it moves
+ * real testnet funds, and it is visible on chain.
+ */
 export function SendForm({
   walletAddress,
-  privateReady,
-  poolSentence,
-  faucetUrl,
-  denominations,
+  senderUsername,
   symbol,
   decimals,
+  faucetUrl,
   initialRecipient,
 }: SendFormProps) {
-  const [mode, setMode] = useState<Mode>(privateReady ? "private" : "external");
   const [recipient, setRecipient] = useState<Recipient | null>(null);
-  const [address, setAddress] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -56,32 +60,10 @@ export function SendForm({
   const [balanceError, setBalanceError] = useState(false);
   const [fee, setFee] = useState<FeeEstimate | null>(null);
   const [feeError, setFeeError] = useState(false);
-  const [sent, setSent] = useState<{ label: string; address: string | null } | null>(null);
+  /** When the payment row was opened, so the receipt can carry a real time. */
+  const [startedAt, setStartedAt] = useState<string | null>(null);
 
   const settlement = useSettlement();
-  const isPrivateMode = mode === "private";
-
-  const denominationWei = useMemo(
-    () => denominations.map((item) => BigInt(item.wei)),
-    [denominations],
-  );
-
-  // The pool settles in fixed sizes, so a private payment may only carry one of
-  // them. An external transfer has no such limit: the chain accepts any amount
-  // that fits the token's precision.
-  const allowedWei = mode === "private" ? denominationWei : null;
-  const presets = useMemo(
-    () =>
-      mode === "private"
-        ? denominations.map((item) => item.label.split(" ")[0])
-        : AMOUNT_PRESETS,
-    [mode, denominations],
-  );
-
-  const rules = { decimals, symbol, balanceWei: balance, allowedWei };
-  const amountCheck = validateAmount(amount, rules);
-  const destination = validateExternalAddress(address, walletAddress);
-  const destinationOk = mode === "private" ? Boolean(recipient) : destination.ok;
 
   const refreshBalance = useCallback(async () => {
     if (!walletAddress) return;
@@ -94,206 +76,139 @@ export function SendForm({
     void refreshBalance();
   }, [refreshBalance]);
 
+  // A link such as /send?to=alice arrives with a username and no address, so
+  // the only way to turn it into a recipient is the same lookup the picker
+  // uses. An exact match is required: a near miss is not the person who was
+  // linked to.
   useEffect(() => {
-    if (!initialRecipient) return;
+    const wanted = initialRecipient?.trim().replace(/^@/, "").toLowerCase();
+    if (!wanted || recipient) return;
     let cancelled = false;
-    fetch(`/api/users/search?q=${encodeURIComponent(initialRecipient)}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((body) => {
-        if (cancelled || !body.ok) return;
-        const match = (body.results as Recipient[] | undefined)?.find(
-          (item) => item.username.toLowerCase() === initialRecipient.toLowerCase(),
-        );
-        if (match) setRecipient(match);
-      })
-      .catch(() => undefined);
+    void (async () => {
+      try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(wanted)}`, {
+          cache: "no-store",
+        });
+        const body = await response.json();
+        const match = body.ok
+          ? (body.data.results as Recipient[]).find((item) => item.username.toLowerCase() === wanted)
+          : undefined;
+        if (!cancelled && match) setRecipient(match);
+      } catch {
+        /* the picker still works by hand */
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [initialRecipient]);
+  }, [initialRecipient, recipient]);
 
-  const estimateWei = useMemo(() => {
-    const parsed = parseAmount(amount, decimals);
-    return parsed.ok ? parsed.wei : 0n;
-  }, [amount, decimals]);
-
-  useEffect(() => {
-    if (!walletAddress) return;
-    // A private payment is not a value transfer, so a native-transfer estimate
-    // would be meaningless: it would price a 21000-gas send while the real cost
-    // is the gas to verify a Groth16 proof. It is left unpriced rather than
-    // priced wrongly, and the fee the network actually charges is shown on the
-    // receipt.
-    if (isPrivateMode) {
-      setFee(null);
-      setFeeError(false);
-      return;
-    }
-    const to =
-      mode === "external" && destination.ok ? destination.address : (walletAddress as `0x${string}`);
-    let cancelled = false;
-    setFeeError(false);
-    estimateNativeTransfer(walletAddress as `0x${string}`, to, estimateWei).then((estimate) => {
-      if (cancelled) return;
-      setFee(estimate);
-      setFeeError(estimate === null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [walletAddress, mode, isPrivateMode, destination, estimateWei, settlement.state.phase]);
-
-  const amountWei = amountCheck.ok ? amountCheck.wei : 0n;
-  const total = fee ? amountWei + fee.feeWei : null;
-  // Only a public transfer comes out of the liquid balance. A private payment
-  // spends a note that is already in the pool, so the wallet balance is not the
-  // budget for it and must not be used to block the send.
-  const shortfall = !isPrivateMode && balance !== null && total !== null ? total - balance : null;
-
-  const busy =
-    settlement.state.phase === "preparing" ||
-    settlement.state.phase === "signing" ||
-    settlement.state.phase === "submitted";
-
-  const canReview = destinationOk && amountCheck.ok && !busy && !(shortfall !== null && shortfall > 0n);
+  const amountCheck = validateAmount(amount, { decimals, symbol, balanceWei: balance });
+  const canReview = Boolean(recipient) && amountCheck.ok && settlement.state.phase !== "preparing";
 
   async function start() {
-    if (!amountCheck.ok || !destinationOk) return;
-    if (mode === "private") {
-      const denomination = denominations.find((item) => BigInt(item.wei) === amountCheck.wei);
-      if (!denomination || !recipient) return;
-      setSent({ label: `@${recipient.username}`, address: null });
-      await settlement.prepare({
-        toUsername: recipient.username,
-        denominationId: denomination.id,
-        privacy: "private",
-        note: note.trim() || undefined,
-      });
-      return;
-    }
-    if (!destination.ok) return;
-    setSent({
-      label: `${destination.address.slice(0, 10)}…${destination.address.slice(-6)}`,
-      address: destination.address,
-    });
-    await settlement.prepare({
-      toAddress: destination.address,
+    if (!recipient || !amountCheck.ok) return;
+    setFee(null);
+    setFeeError(false);
+    // The recipient's address comes back from here and stays in this hook. It
+    // is what the browser signs against; the form never reads it.
+    const intent = await settlement.prepare({
+      toUsername: recipient.username,
       amountWei: amountCheck.wei.toString(),
       privacy: "public",
       note: note.trim() || undefined,
     });
-  }
-
-  if (!walletAddress) {
-    return (
-      <Card>
-        <div style={{ padding: 22 }}>
-          <p className="table-head">No wallet yet</p>
-          <p className="muted tiny" style={{ marginTop: 10 }}>
-            A wallet is created during onboarding and it lives in your browser. Finish setting up your account
-            and you can send from here.
-          </p>
-          <Link href="/onboarding" className="btn btn-primary btn-sm" style={{ marginTop: 16 }}>
-            Finish setup
-          </Link>
-        </div>
-      </Card>
+    if (!intent?.to) return;
+    setStartedAt(new Date().toISOString());
+    const estimate = await estimateNativeTransfer(
+      (walletAddress ?? "0x0000000000000000000000000000000000000000") as `0x${string}`,
+      intent.to,
+      BigInt(intent.amountWei),
     );
+    setFee(estimate);
+    setFeeError(estimate === null);
   }
 
-  if (settlement.state.phase === "confirmed" || settlement.state.phase === "submitted") {
-    const { intent, txHash } = settlement.state;
+  const shortfall =
+    balance !== null && amountCheck.ok && fee
+      ? amountCheck.wei + fee.feeWei - balance
+      : null;
+
+  // ── the receipt ────────────────────────────────────────────────────────────
+  const state = settlement.state;
+  if (state.phase === "submitted" || state.phase === "confirmed") {
+    const confirmed = state.phase === "confirmed";
     return (
-      <Card>
-        <div style={{ padding: 22 }}>
-          <Receipt
-            amountLabel={formatWei(BigInt(intent.amountWei))}
-            symbol={symbol}
-            txHash={txHash}
-            explorerUrl={explorerTxUrl(txHash)}
-            status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
-            blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
-            toLabel={sent?.label ?? "recipient"}
-            toAddress={sent?.address ?? null}
-            privacy={intent.privacy}
-          />
-          <div className="row" style={{ gap: 8, marginTop: 18 }}>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                settlement.reset();
-                setRecipient(null);
-                setAddress("");
-                setAmount("");
-                setNote("");
-                setSent(null);
-                void refreshBalance();
-              }}
-            >
-              Send another
-            </button>
-            <Link href="/activity" className="btn btn-secondary btn-sm">
-              View activity
-            </Link>
-            <button className="btn btn-ghost btn-sm" onClick={() => void refreshBalance()}>
-              <Icon name="refresh" size={14} />
-              Refresh balance
-            </button>
-          </div>
+      <div className="stack">
+        <PaymentReceipt
+          receiptId={state.intent.paymentId}
+          status={confirmed ? "confirmed" : "submitted"}
+          fromUsername={senderUsername}
+          toUsername={state.intent.recipientUsername ?? recipient?.username ?? "unknown"}
+          amountWei={state.intent.amountWei}
+          symbol={symbol}
+          createdAt={startedAt ?? new Date().toISOString()}
+          note={note.trim() || null}
+          txHash={state.txHash}
+          chainName="Elysium Testnet"
+          downloadable={confirmed}
+        />
+
+        {!confirmed ? (
+          <Notice tone="info" title="Waiting for the network">
+            The transaction is broadcast and CloakPay is watching for its receipt. This page becomes a
+            completed receipt with a download the moment the network confirms it — reload to check.
+          </Notice>
+        ) : null}
+
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              settlement.reset();
+              setAmount("");
+              setPassphrase("");
+              setStartedAt(null);
+              setFee(null);
+              setRecipient(null);
+              void refreshBalance();
+            }}
+          >
+            Send another payment
+          </button>
+          <a className="btn btn-ghost btn-sm" href="/activity">
+            View activity
+          </a>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <div className="split">
-      <div className="stack">
-        {!privateReady ? <PoolUnavailableNotice sentence={poolSentence} faucetUrl={faucetUrl} /> : null}
-
+    <div className="stack">
+      <div className="split">
         <Card>
-          <div style={{ padding: 22 }} className="stack">
-            <SettlementPicker
-              value={mode === "private" ? "private" : "public"}
-              onChange={(next) => {
-                setMode(next === "private" ? "private" : "external");
-                setAmount("");
-              }}
-              privateReady={privateReady}
-              privateBlocker={poolSentence}
-            />
+          <div style={{ padding: 22 }}>
+            <RecipientPicker value={recipient} onSelect={setRecipient} autoFocus={!initialRecipient} />
 
-            {mode === "private" ? (
-              <RecipientPicker value={recipient} onSelect={setRecipient} autoFocus />
-            ) : (
-              <>
-                <AddressPicker value={address} onChange={setAddress} self={walletAddress} />
-                <Notice tone="warn" title="This transfer is public">
-                  A direct transfer is an ordinary on-chain transaction. The amount, both addresses and the
-                  time are visible to anyone, and they stay visible forever. It is not a private payment.
-                </Notice>
-              </>
-            )}
+            <div style={{ marginTop: 20 }}>
+              <AmountInput
+                value={amount}
+                onChange={setAmount}
+                symbol={symbol}
+                decimals={decimals}
+                balanceWei={balance}
+                hint={
+                  balanceError
+                    ? "Balance unavailable — the node did not answer."
+                    : balance === null
+                      ? "Reading your balance…"
+                      : `${formatWei(balance)} ${symbol} available in this account.`
+                }
+              />
+            </div>
 
-            <AmountInput
-              id="send-amount"
-              value={amount}
-              onChange={setAmount}
-              symbol={symbol}
-              decimals={decimals}
-              balanceWei={isPrivateMode ? null : balance}
-              allowedWei={allowedWei}
-              presets={presets}
-              label={`Amount in ${symbol}`}
-              hint={
-                mode === "private"
-                  ? "The pool settles in the fixed sizes above so that no amount identifies a payment. Spending a size needs a shielded note of that size — check the Privacy page."
-                  : balance === null
-                    ? "Type any amount. Your balance is still being read from the network."
-                    : `You have ${formatWei(balance)} ${symbol}. The network fee is charged on top.`
-              }
-            />
-
-            <label className="field">
+            <label className="field" style={{ marginTop: 16 }}>
               <span className="label">Note (optional)</span>
               <input
                 className="input"
@@ -302,144 +217,145 @@ export function SendForm({
                 maxLength={140}
                 placeholder="What is this for?"
               />
-              <span className="hint">Stored with the payment record. It is never written to the chain.</span>
             </label>
           </div>
         </Card>
 
-        {settlement.state.phase === "failed" ? (
-          <Notice tone="error" title="Payment did not go through">
-            {settlement.state.message}
-          </Notice>
-        ) : null}
+        <div className="stack">
+          {settlement.state.phase === "ready" ? (
+            <Card>
+              <div style={{ padding: 22 }}>
+                <p className="table-head">Review the payment</p>
+                <dl className="kv" style={{ marginTop: 12 }}>
+                  <dt>To</dt>
+                  <dd className="mono">@{recipient?.username}</dd>
+                  <dt>Amount</dt>
+                  <dd className="mono">
+                    {formatWei(BigInt(settlement.state.intent.amountWei))} {symbol}
+                  </dd>
+                  <dt>Asset</dt>
+                  <dd className="mono">{symbol}</dd>
+                  <dt>From</dt>
+                  <dd className="mono">@{senderUsername}</dd>
+                  <dt>Network fee</dt>
+                  <dd className="mono">
+                    {fee
+                      ? `~${formatWei(fee.feeWei, 18, 8)} ${symbol}`
+                      : feeError
+                        ? "unavailable"
+                        : "estimating…"}
+                  </dd>
+                </dl>
+
+                {shortfall !== null && shortfall > 0n ? (
+                  <div style={{ marginTop: 16 }}>
+                    <Notice tone="warn" title={`Not enough ${symbol}`}>
+                      You need about {formatWei(shortfall)} more {symbol} to cover the payment and the fee.{" "}
+                      <a className="link" href={faucetUrl} target="_blank" rel="noreferrer noopener">
+                        Get testnet funds
+                      </a>
+                      .
+                    </Notice>
+                  </div>
+                ) : null}
+
+                <div className="stack" style={{ marginTop: 16 }}>
+                  <label className="field">
+                    <span className="label">
+                      <Icon name="lock" size={13} /> Wallet passphrase
+                    </span>
+                    <input
+                      className="input"
+                      type="password"
+                      value={passphrase}
+                      onChange={(event) => setPassphrase(event.target.value)}
+                      autoComplete="current-password"
+                      placeholder={isUnlocked() ? "Already unlocked this session" : "Unlock to sign"}
+                      disabled={isUnlocked()}
+                    />
+                    <span className="hint">
+                      It unseals the wallet in this tab only. It is never sent to CloakPay.
+                    </span>
+                  </label>
+                  <p className="tiny muted">
+                    Signing sends {formatWei(BigInt(settlement.state.intent.amountWei))} {symbol} to
+                    @{recipient?.username} on {symbol}&apos;s test network. It is a normal public transfer:
+                    the chain shows that one address paid another, though not who either belongs to.
+                  </p>
+                  <button
+                    className="btn btn-primary btn-block"
+                    disabled={settlement.state.phase !== "ready"}
+                    onClick={() => settlement.confirm(passphrase)}
+                  >
+                    Confirm and send
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-block" onClick={settlement.reset}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card>
+              <div style={{ padding: 22 }}>
+                <p className="table-head">Pay by username</p>
+                <p className="tiny muted" style={{ marginTop: 10 }}>
+                  CloakPay finds the account from the username. Nothing here asks for an address, and none is
+                  shown at any point in the payment.
+                </p>
+                <button
+                  className="btn btn-primary btn-block"
+                  style={{ marginTop: 16 }}
+                  disabled={!canReview}
+                  onClick={() => void start()}
+                >
+                  {settlement.state.phase === "preparing" ? "Preparing…" : "Review payment"}
+                </button>
+                {settlement.state.phase === "idle" && !canReview ? (
+                  <p className="tiny muted" style={{ marginTop: 10 }}>
+                    {!recipient
+                      ? "Choose a recipient to continue."
+                      : amountCheck.ok
+                        ? ""
+                        : amountCheck.reason}
+                  </p>
+                ) : null}
+              </div>
+            </Card>
+          )}
+
+          {settlement.state.phase === "failed" ? (
+            <Notice tone="error" title="The payment did not go through">
+              {settlement.state.message} Nothing was sent, and you can try again.
+            </Notice>
+          ) : null}
+
+          <Card className="card-quiet">
+            <div style={{ padding: 20 }}>
+              <p className="table-head">What the recipient sees</p>
+              <p className="tiny muted" style={{ marginTop: 8 }}>
+                A payment from @{senderUsername}, the amount, and the time. The two accounts are joined by
+                their usernames inside CloakPay; no address is exchanged in either direction or printed on the
+                receipt.
+              </p>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <div className="stack">
-        <Card>
-          <div style={{ padding: 22 }}>
-            <p className="table-head">Summary</p>
-            <div className="amount-display" style={{ marginTop: 14 }}>
-              <span className="mono">{amountCheck.ok ? formatWei(amountCheck.wei) : "—"}</span>
-              <span className="amount-display-unit">{symbol}</span>
-            </div>
-            <dl className="kv" style={{ marginTop: 16 }}>
-              <dt>To</dt>
-              <dd className="mono">
-                {mode === "private"
-                  ? recipient
-                    ? `@${recipient.username}`
-                    : "choose a username"
-                  : destination.ok
-                    ? `${destination.address.slice(0, 12)}…${destination.address.slice(-8)}`
-                    : "enter a wallet address"}
-              </dd>
-              <dt>Settlement</dt>
-              <dd>{mode === "private" ? "Private — CloakPay users" : "Direct Transfer — External wallets"}</dd>
-              {isPrivateMode ? (
-                <>
-                  <dt>Paid from</dt>
-                  <dd>A shielded note of this size</dd>
-                  <dt>Network fee</dt>
-                  <dd className="mono">charged in {symbol} when you sign</dd>
-                </>
-              ) : (
-                <>
-                  <dt>Network fee</dt>
-                  <dd className="mono">
-                    {fee ? `~${formatWei(fee.feeWei, 18, 8)} ${symbol}` : feeError ? "unavailable" : "estimating…"}
-                  </dd>
-                  <dt>Wallet balance</dt>
-                  <dd className="mono">
-                    {balanceError ? (
-                      <button type="button" className="link tiny" onClick={() => void refreshBalance()}>
-                        Unavailable — retry
-                      </button>
-                    ) : balance === null ? (
-                      "reading…"
-                    ) : (
-                      `${formatWei(balance)} ${symbol}`
-                    )}
-                  </dd>
-                </>
-              )}
-            </dl>
-
-            {shortfall !== null && shortfall > 0n ? (
-              <div style={{ marginTop: 16 }}>
-                <Notice tone="warn" title={`Not enough ${symbol}`}>
-                  You need about {formatWei(shortfall)} more {symbol} to cover the amount and the fee. Get
-                  testnet funds from the{" "}
-                  <a className="link" href={faucetUrl} target="_blank" rel="noreferrer noopener">
-                    Elysium faucet
-                  </a>
-                  .
-                </Notice>
-              </div>
-            ) : null}
-
-            {settlement.state.phase === "ready" ? (
-              <div className="stack" style={{ marginTop: 16 }}>
-                <label className="field">
-                  <span className="label">
-                    <Icon name="lock" size={13} /> Wallet passphrase
-                  </span>
-                  <input
-                    className="input"
-                    type="password"
-                    value={passphrase}
-                    onChange={(event) => setPassphrase(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder={isUnlocked() ? "Already unlocked this session" : "Unlock to sign"}
-                    disabled={isUnlocked()}
-                  />
-                  <span className="hint">
-                    It unseals the wallet in this tab only. It is never sent to CloakPay.
-                  </span>
-                </label>
-                <p className="tiny muted">
-                  {settlement.state.intent.privacy === "private"
-                    ? `A proof will be generated in this browser for ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol} to ${sent?.label ?? "the recipient"}. The pool publishes a nullifier and a new commitment, never an address. If you hold no spendable note of that size, nothing is signed.`
-                    : sent?.address
-                      ? `Confirming a public transfer of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol} to ${sent.address}.`
-                      : `Confirming a payment of ${formatWei(BigInt(settlement.state.intent.amountWei))} ${symbol}.`}
-                </p>
-                <button className="btn btn-primary btn-block" onClick={() => settlement.confirm(passphrase)}>
-                  {settlement.state.intent.privacy === "private" ? "Prove and send" : "Sign and send"}
-                </button>
-                <button className="btn btn-ghost btn-sm btn-block" onClick={settlement.reset}>
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                className="btn btn-primary btn-block"
-                style={{ marginTop: 16 }}
-                disabled={!canReview}
-                onClick={start}
-              >
-                {settlement.state.phase === "preparing" ? "Preparing…" : "Review payment"}
-              </button>
-            )}
-
-            {mode === "external" ? (
-              <p className="tiny muted" style={{ marginTop: 10 }}>
-                You will see the address, the amount and the fee before anything is signed, and the real
-                transaction hash afterwards.
-              </p>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card className="card-quiet">
-          <div style={{ padding: 20 }}>
-            <p className="table-head">What the recipient sees</p>
-            <p className="tiny muted" style={{ marginTop: 8 }}>
-              {mode === "private"
-                ? "A private payment shows the amount, the note and your username. Your wallet address is not part of the payment."
-                : "Their activity list shows the amount, the note and the sending address. A public transfer is visible on chain to everyone, not only to them."}
-            </p>
-          </div>
-        </Card>
+      <div className="stack" style={{ marginTop: 26 }}>
+        <ComingSoon
+          title="External Transfer"
+          icon="external"
+          body="Sending to a wallet address that is not a CloakPay account is paused. This page no longer asks for one, and neither does any other screen."
+          note="Payments to CloakPay usernames are unaffected, and the transfer code behind this is untouched. It will return in a future update."
+        />
+        <ComingSoon
+          title="Shielded Pool"
+          icon="shield"
+          body="Private payments are paused while CloakPay focuses on paying people by username. It is not offered here, so a payment can never be quietly settled as though it were private."
+          note="The contracts, the circuits and the notes are all still in place, ready for the feature to come back."
+        />
       </div>
     </div>
   );

@@ -19,17 +19,30 @@ fixtures they create:
 
 ```bash
 APP_URL=http://localhost:3200 npm run username:check   # registration, end to end
-APP_URL=http://localhost:3200 npm run privacy:check    # the two payment paths
+APP_URL=http://localhost:3200 npm run privacy:check    # payment routing: one live path, two paused
+APP_URL=http://localhost:3200 npm run receipt:check    # the receipt, its authorization and its PDF
 APP_URL=http://localhost:3200 npm run nav:check        # the nav drawer and signed-in routing
 APP_URL=http://localhost:3200 NEXT_PUBLIC_ZK_PATH=$PWD/public/zk npm run e2e:shielded
 ```
 
-`privacy:check` is the guard on the private/public split: a private payment is
-opened without a destination address being handed to the payer, an address
-cannot be smuggled into the private path, a private link cannot be settled as a
-public transfer, a refused attempt does not spend the link's use, a private
-payment cannot be recorded without the transaction that settled it, and an
-external transfer still opens.
+`privacy:check` is the guard on the payment routing, now that two of the three
+paths are paused. Every paused entry point is probed the way a stale tab would
+probe it -- a private intent, an external-address intent, a private link and the
+settlement endpoint -- and each must refuse and leave nothing behind: no payment
+row, and no burned use on a one-time link. An old private link must not be
+settleable privately *or* as an ordinary transfer. The live path is checked from
+the other side: a username payment (resolved case-insensitively) opens for the
+account the username names, carries the amount and asset that were asked for,
+writes a row that agrees, and is refused for an unknown name, a self-payment or
+a zero amount. Finally, a third account must not be able to change a payment
+that is not theirs.
+
+`receipt:check` covers the document itself against the real route: signed out is
+401, a third account gets 404 -- the same answer as a payment that does not
+exist, so nothing is disclosed -- a payment that has not confirmed is 409 and
+produces no file, and a confirmed one downloads a PDF named after its reference
+that parses, names both usernames, is byte-identical when downloaded twice, and
+contains no wallet address at all.
 
 `e2e:shielded` is the one that answers the question the others cannot: does a
 private payment actually work? It drives `src/lib/client/shielded.ts` -- the same
@@ -40,6 +53,11 @@ recipient decrypt the note the server only ever held as ciphertext, and withdraw
 it to an external address. Seventeen checks, each read back from the chain. It
 needs `NEXT_PUBLIC_ZK_PATH` because snarkjs resolves the proving artifacts itself
 and, outside a browser, resolves them on disk.
+
+It also still passes while the pool is paused, which is the point: pausing a
+feature in the interface and in the API must not rot the implementation behind
+it. Nothing in the app reaches this code today, and the check is what keeps that
+from becoming "it no longer works either".
 
 It also needs the deployment wallet to hold enough testnet HYPE to bankroll the
 two throwaway wallets it creates; it says so plainly and stops before spending

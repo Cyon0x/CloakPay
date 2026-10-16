@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { WalletSummary } from "@/components/WalletSummary";
+import { ComingSoon } from "@/components/ComingSoon";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
@@ -8,15 +9,17 @@ import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain } from "@/config/chain";
 import { poolStatusSentence } from "@/config/pool";
+import { EXTERNAL_TRANSFER_PAUSED } from "@/config/features";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
 /**
  * Home is about the two things a person opens it for: what they hold, and who
- * they are paying. The shielded pool moved to its own Privacy section, so what
- * is left here is real balances and real payments rather than privacy figures
- * that are not in play yet.
+ * they are paying. It leads with the username, because that is the thing a
+ * CloakPay payment is addressed to, and with the balance that a payment is
+ * actually spent from. The two features that are paused are listed at the
+ * bottom as paused, so nothing here suggests they are available.
  */
 export default async function DashboardPage() {
   const user = await currentUserOrRedirect();
@@ -69,12 +72,58 @@ export default async function DashboardPage() {
           decimals={activeChain.nativeToken.decimals}
         />
 
+        <section className="grid-3" style={{ marginTop: 22 }}>
+          <Card className="card-quiet">
+            <div style={{ padding: 20 }}>
+              <p className="table-head">Pay someone</p>
+              <p className="tiny muted" style={{ marginTop: 8 }}>
+                Type a CloakPay username on the Send page and pay them in {activeChain.nativeToken.symbol}. No
+                address is asked for or shown.
+              </p>
+              <Link href="/send" className="btn btn-primary btn-sm" style={{ marginTop: 14 }}>
+                <Icon name="send" size={14} />
+                Send a payment
+              </Link>
+            </div>
+          </Card>
+          <Card className="card-quiet">
+            <div style={{ padding: 20 }}>
+              <p className="table-head">Receipts</p>
+              <p className="tiny muted" style={{ marginTop: 8 }}>
+                Every confirmed payment has a receipt you can download again from the transaction history.
+              </p>
+              <Link href="/transactions" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
+                <Icon name="list" size={14} />
+                All transactions
+              </Link>
+            </div>
+          </Card>
+          <Card className="card-quiet">
+            <div style={{ padding: 20 }}>
+              <p className="table-head">Get paid</p>
+              <p className="tiny muted" style={{ marginTop: 8 }}>
+                Share @{user.username} and the payment finds you. Receive also shows the address for funds
+                from outside CloakPay.
+              </p>
+              <Link href="/receive" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
+                <Icon name="receive" size={14} />
+                Receiving details
+              </Link>
+            </div>
+          </Card>
+        </section>
+
         <section style={{ marginTop: 28 }}>
           <div className="row-between" style={{ marginBottom: 12 }}>
             <h2 style={{ fontSize: 17 }}>Recent activity</h2>
-            <Link href="/activity" className="link tiny">
-              View all
-            </Link>
+            <div className="row" style={{ gap: 10 }}>
+              <Link href="/activity" className="link tiny">
+                View all
+              </Link>
+              <Link href="/transactions" className="link tiny">
+                All transactions
+              </Link>
+            </div>
           </div>
           {recent.length === 0 ? (
             <EmptyState
@@ -104,6 +153,11 @@ export default async function DashboardPage() {
                       {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"}{" "}
                       {activeChain.nativeToken.symbol}
                     </span>
+                    {row.status === "confirmed" ? (
+                      <Link href={`/transactions/${row.id}`} className="btn btn-ghost btn-sm">
+                        Receipt
+                      </Link>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -112,23 +166,25 @@ export default async function DashboardPage() {
         </section>
 
         <section style={{ marginTop: 28 }}>
-          <Card className="card-quiet">
-            <div className="privacy-teaser">
-              <span className="feature-icon">
-                <Icon name="shield" size={17} />
-              </span>
-              <div className="grow">
-                <h3 style={{ fontSize: 15 }}>Privacy</h3>
-                <p className="tiny muted" style={{ marginTop: 4 }}>
-                  {poolStatusSentence(activeChain.chainId)}
-                </p>
-              </div>
-              <Link href="/privacy" className="btn btn-secondary btn-sm">
-                Open
+          <div className="stack">
+            <ComingSoon
+              title="Shielded Pool"
+              icon="shield"
+              body="Private payments are paused while CloakPay focuses on paying people by username."
+              note={poolStatusSentence(activeChain.chainId)}
+            >
+              <Link href="/privacy" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>
+                What the pool does
                 <Icon name="arrowRight" size={14} />
               </Link>
-            </div>
-          </Card>
+            </ComingSoon>
+            <ComingSoon
+              title="External Transfer"
+              icon="external"
+              body={EXTERNAL_TRANSFER_PAUSED}
+              note="Receiving from an external wallet still works: the address is on the Receive page."
+            />
+          </div>
         </section>
       </>
     </AuthedShell>

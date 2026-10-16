@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { consumeLinkUse } from "@/lib/payments";
 import { denominationById, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
+import { EXTERNAL_TRANSFER_PAUSED, externalTransfersEnabled, shieldedPoolEnabled } from "@/config/features";
 import { activeChain } from "@/config/chain";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,16 @@ export async function POST(request: Request) {
     const parsed = bodySchema.safeParse(await request.json());
     if (!parsed.success) return fail(400, "invalid_body", "That payment was not valid.");
     const body = parsed.data;
+
+    // Recording a settlement is the other half of the same two doors. A paused
+    // path is refused here as well, so nothing can be written to the ledger by
+    // a client that skipped the intent step.
+    if (body.privacy === "private" && !shieldedPoolEnabled()) {
+      return fail(409, "shielded_pool_paused", poolStatusSentence(activeChain.chainId));
+    }
+    if (body.privacy === "public" && body.toUsername === undefined && !externalTransfersEnabled()) {
+      return fail(409, "external_transfer_paused", EXTERNAL_TRANSFER_PAUSED);
+    }
 
     const denomination = denominationById(body.denominationId);
     if (!denomination) return fail(400, "unknown_denomination", "Unsupported amount.");

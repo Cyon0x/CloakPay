@@ -8,8 +8,33 @@ import { paymentCode } from "@/lib/codes";
 import { validateExternalAddress } from "@/lib/address";
 import { activeChain } from "@/config/chain";
 import { denominationById, poolStatusSentence, privatePaymentsAvailable } from "@/config/pool";
+import {
+  EXTERNAL_TRANSFER_PAUSED,
+  externalTransfersEnabled,
+  shieldedPoolEnabled,
+} from "@/config/features";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Whether the request is for a path CloakPay has paused, and why.
+ *
+ * This is a function rather than an inline check so the refusal is decided in
+ * one place for both paused paths, and so the flow below it stays written as it
+ * will be when they return.
+ */
+function paused(
+  privacy: "private" | "public",
+  hasExternalAddress: boolean,
+): { code: string; message: string } | null {
+  if (privacy === "private" && !shieldedPoolEnabled()) {
+    return { code: "shielded_pool_paused", message: poolStatusSentence(activeChain.chainId) };
+  }
+  if (hasExternalAddress && !externalTransfersEnabled()) {
+    return { code: "external_transfer_paused", message: EXTERNAL_TRANSFER_PAUSED };
+  }
+  return null;
+}
 
 const bodySchema = z.object({
   toUsername: z.string().min(3).max(20).optional(),
@@ -48,6 +73,14 @@ export async function POST(request: Request) {
     const sql = db();
     const external = Boolean(body.toAddress);
 
+    // The two paths beside the username flow are paused, and they are refused
+    // here rather than only in the form that used to offer them: a stale tab, a
+    // bookmarked route or a hand-made request meets the same wall as the UI.
+    // The check comes before anything is written, so a refused attempt leaves
+    // no payment row and burns no link use.
+    const refused = paused(body.privacy, external);
+    if (refused) return fail(409, refused.code, refused.message);
+
     if (external && body.privacy === "private") {
       return fail(
         400,
@@ -64,18 +97,22 @@ export async function POST(request: Request) {
     if (!limit.allowed) return fail(429, "rate_limited", "Too many attempts. Wait a moment.");
 
     // ── amount ────────────────────────────────────────────────────────────────
+    // An amount is either exact wei, which is how a username payment and a
+    // free-amount link arrive, or one of the pool's fixed denominations, which
+    // is how a private payment arrives. Exactly one of them has to be present.
     let amountWei: bigint;
     let denominationId: string | null = null;
 
-    if (external) {
-      if (!body.amountWei) return fail(400, "missing_amount", "Enter an amount to send.");
+    if (body.amountWei) {
       amountWei = BigInt(body.amountWei);
       if (amountWei <= 0n) return fail(400, "invalid_amount", "Enter an amount greater than zero.");
-    } else {
+    } else if (body.denominationId) {
       const denomination = body.denominationId ? denominationById(body.denominationId) : undefined;
       if (!denomination) return fail(400, "unknown_denomination", "Unsupported amount.");
       amountWei = denomination.wei;
       denominationId = denomination.id;
+    } else {
+      return fail(400, "missing_amount", "Enter an amount to send.");
     }
 
     // ── recipient ─────────────────────────────────────────────────────────────

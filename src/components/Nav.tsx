@@ -15,6 +15,20 @@ export interface NavUser {
   displayName: string | null;
 }
 
+/** One destination in the mobile drawer. */
+interface DrawerItem {
+  href: string;
+  label: string;
+  icon: string;
+  /**
+   * Set on a destination whose feature is paused. The page still exists and is
+   * still worth reading -- it says what the feature does and that it is not
+   * available -- so the drawer keeps the link and labels it, rather than
+   * hiding a page that answers the question the user is asking.
+   */
+  soon?: boolean;
+}
+
 /** The horizontal bar, which is hidden on narrow screens. */
 const DESKTOP_ITEMS = [
   { href: "/dashboard", label: "Home", icon: "home" },
@@ -122,7 +136,7 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
 
   const close = useCallback(() => setMenuOpen(false), []);
 
-  const account = user
+  const account: DrawerItem[] = user
     ? [
         { href: "/dashboard", label: "Home", icon: "home" },
         { href: "/send", label: "Send", icon: "send" },
@@ -130,7 +144,7 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
         { href: "/activity", label: "Activities", icon: "activity" },
         { href: "/transactions", label: "All transactions", icon: "list" },
         { href: "/links", label: "Payment links", icon: "link" },
-        { href: "/privacy", label: "Privacy", icon: "shield" },
+        { href: "/privacy", label: "Privacy", icon: "shield", soon: true },
         { href: "/faucet", label: "Faucet", icon: "gift" },
         user.username
           ? { href: `/u/${user.username}`, label: "Profile", icon: "user" }
@@ -265,7 +279,9 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
                 >
                   <Icon name={item.icon} size={17} />
                   <span className="grow">{item.label}</span>
-                  {isCurrent(pathname, item.href) ? (
+                  {item.soon ? (
+                    <span className="drawer-soon">Coming soon</span>
+                  ) : isCurrent(pathname, item.href) ? (
                     <span className="drawer-dot" aria-hidden="true" />
                   ) : null}
                 </Link>

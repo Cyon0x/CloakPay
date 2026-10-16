@@ -60,9 +60,8 @@ export default async function PublicProfilePage({
               </div>
 
               <div className="row" style={{ gap: 8, marginTop: 16 }}>
-                <Badge kind={profile.viewing_key_id ? "private" : "setup"}>
-                  {profile.viewing_key_id ? "Accepts private payments" : "Privacy setup required"}
-                </Badge>
+                <Badge kind="info">Pays by username</Badge>
+                <span className="tiny muted">Private payments are paused.</span>
               </div>
 
               <div style={{ marginTop: 22 }}>
