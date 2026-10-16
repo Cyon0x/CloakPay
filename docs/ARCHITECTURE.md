@@ -166,10 +166,10 @@ component when an old receipt is reopened — and `renderReceiptPdf` draws the s
 fields into a PDF for `GET /api/payments/:id/receipt`.
 
 Two rules hold across all three: a completed receipt exists only for a
-`confirmed` payment, and no receipt contains a wallet address. The transaction
-hash is kept, because a receipt is also a reconciliation document, and it is
-printed as plain text rather than as an explorer link so the document stands on
-its own.
+`confirmed` payment, and no receipt contains a wallet address or a transaction
+hash. The hash stays on the payment row for reconciliation, but a receipt is
+the record of a payment rather than a pointer into a ledger, so neither the page
+nor the PDF prints it — and no receipt links to an explorer.
 
 ### Settlement order
 

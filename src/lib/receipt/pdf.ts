@@ -15,8 +15,9 @@ import { formatStamp } from "./format";
  * and on a phone screen.
  *
  * The palette is CloakPay's: ink `#14171b` for text, slate for labels, and the
- * brand lockup at the top. No wallet address is printed, and neither is a link
- * to an explorer — the document has to stand on its own.
+ * brand lockup at the top. No wallet address is printed, and neither is a
+ * transaction hash nor a link to an explorer: the document records the payment
+ * itself, and is deliberately not a pointer anybody can follow to a wallet.
  */
 
 const INK = rgb(0.078, 0.09, 0.106); // #14171b
@@ -142,7 +143,6 @@ export async function renderReceiptPdf(receipt: ReceiptData): Promise<Uint8Array
   if (receipt.confirmedAt) rows.push(["Confirmed", formatStamp(receipt.confirmedAt)]);
   if (receipt.note) rows.push(["Note", receipt.note]);
   rows.push(["Receipt reference", receipt.receiptId]);
-  if (receipt.txHash) rows.push(["Transaction reference", receipt.txHash]);
   rows.push(["Network", receipt.chainName]);
 
   for (const [label, value] of rows) {

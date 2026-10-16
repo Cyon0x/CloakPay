@@ -19,7 +19,7 @@ afford to lose.
 | Self-custodial embedded wallet (12-word BIP-39 in the browser) | Working |
 | **Payments to another CloakPay user by username** | Working. The only payment flow CloakPay offers: type a username, review it, sign, and keep the receipt. Case-insensitive lookup is enforced by a unique database index. |
 | HYPE transfers signed in the browser and broadcast to the Elysium RPC | Working. This is what a username payment settles as: an ordinary native transfer on Elysium. It is public on chain, and every surface says so. |
-| Payment receipts, in the app and as a PDF | Working. Issued only for a confirmed payment, downloaded from the send flow or reopened from the transaction history. No wallet address appears on one. |
+| Payment receipts, in the app and as a PDF | Working. Issued only for a confirmed payment, downloaded from the send flow or reopened from the transaction history. A receipt carries the two usernames, the amount, the time and its own reference — no wallet address, no transaction hash and no explorer link. |
 | Payment links, QR codes, native share, expiry, usage limits, one-time links | Working |
 | Transaction records with real confirmation from the chain | Working |
 | In-app notifications, rate limiting, audit events | Working |

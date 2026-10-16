@@ -82,7 +82,7 @@ export function CheckoutPanel({
   const payableWei = freeAmount ? (amountCheck.ok ? amountCheck.wei : null) : amountWei;
 
   if (settlement.state.phase === "confirmed" || settlement.state.phase === "submitted") {
-    const { intent, txHash } = settlement.state;
+    const { intent } = settlement.state;
     return (
       <Card>
         <div style={{ padding: 24 }}>
@@ -94,7 +94,6 @@ export function CheckoutPanel({
             amountWei={intent.amountWei}
             symbol="HYPE"
             createdAt={startedAt ?? new Date().toISOString()}
-            txHash={txHash}
             chainName="Elysium Testnet"
             downloadable={settlement.state.phase === "confirmed"}
           />

@@ -12,8 +12,9 @@
  *   2. A completed receipt exists only for a payment the network confirmed. A
  *      pending payment must not produce a file that says it settled.
  *   3. The file is a real PDF that names both usernames, and it carries no
- *      wallet address. That last one is checked against the bytes: an address
- *      printed on a receipt is exactly the leak this feature is meant to avoid.
+ *      wallet address and no transaction hash. Those last two are checked
+ *      against the bytes: an address or a hash printed on a receipt is exactly
+ *      the pointer back to a wallet that this feature is meant to avoid.
  *
  * Needs a running server and a real database. It creates three fixture users
  * and two payments (one confirmed, one pending) and deletes them again.
@@ -60,6 +61,8 @@ const record = (name, ok, detail = "") => {
 const tag = randomBytes(3).toString("hex");
 const PAYER_ADDRESS = `0x${"22".repeat(20)}`;
 const PAYEE_ADDRESS = `0x${"33".repeat(20)}`;
+/** The hash the confirmed fixture payment is recorded with. It must not surface. */
+const TX_HASH = `0x${"ef".repeat(32)}`;
 
 let reachable = false;
 try {
@@ -108,7 +111,7 @@ try {
           note, tx_hash, idempotency_key, confirmed_at
         ) values (
           99801, 'public', ${status}, ${payer.id}, ${payee.id}, '1500000000000000000', 'HYPE',
-          'Receipt check', ${`0x${"ef".repeat(32)}`}, ${`qa-receipt-${tag}-${status}`},
+          'Receipt check', ${TX_HASH}, ${`qa-receipt-${tag}-${status}`},
           ${confirmedAt ? sql`now()` : null}
         )
         returning id
@@ -200,6 +203,11 @@ try {
     !/[0-9a-fA-F]{40}/.test(bytes.toString("latin1")),
     "no run of 40 hex characters in the file",
   );
+  record(
+    "no transaction hash appears in the file",
+    !bytes.toString("latin1").toLowerCase().includes(TX_HASH.slice(2)),
+    `the payment's hash is absent from the ${bytes.length}-byte document`,
+  );
 
   // ── the receipt page inside the app ───────────────────────────────────────
   response = await get(`/transactions/${confirmed.id}`, payer.token);
@@ -216,6 +224,11 @@ try {
     "and it prints no wallet address",
     !html.includes(PAYER_ADDRESS.slice(2)) && !html.includes(PAYEE_ADDRESS.slice(2)),
     "neither party's address is in the page",
+  );
+  record(
+    "and it prints no transaction hash",
+    !html.toLowerCase().includes(TX_HASH.slice(2)),
+    "the payment's hash is not on the receipt page",
   );
 
   response = await get(`/transactions/${confirmed.id}`, stranger.token);

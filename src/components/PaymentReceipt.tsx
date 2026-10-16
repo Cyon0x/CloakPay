@@ -12,9 +12,10 @@ import { formatReceiptAmount, formatStamp } from "@/lib/receipt/format";
  * very same component when an old receipt is reopened. One component means the
  * two can never disagree about what a receipt says.
  *
- * It shows the two usernames and never a wallet address, and it carries no link
- * to an explorer: the document has to be understood on its own, on screen or on
- * paper.
+ * It shows the two usernames and never a wallet address, and it carries neither
+ * a transaction hash nor a link to an explorer: a receipt is the record of a
+ * payment, not a pointer to a public ledger entry, and the document has to be
+ * understood on its own, on screen or on paper.
  */
 export interface PaymentReceiptProps {
   /** The payment id, which is also the receipt reference. */
@@ -26,7 +27,6 @@ export interface PaymentReceiptProps {
   symbol: string;
   createdAt: string;
   note?: string | null;
-  txHash?: string | null;
   chainName: string;
   /** True only for a confirmed payment: nothing else can be downloaded. */
   downloadable?: boolean;
@@ -61,7 +61,6 @@ export function PaymentReceipt({
   symbol,
   createdAt,
   note,
-  txHash,
   chainName,
   downloadable = false,
   children,
@@ -78,7 +77,6 @@ export function PaymentReceipt({
   ];
   if (note) rows.push(["Note", note]);
   rows.push(["Receipt reference", receiptId, true]);
-  if (txHash) rows.push(["Transaction reference", txHash, true]);
 
   return (
     <Card className="receipt-card">

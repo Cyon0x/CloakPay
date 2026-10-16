@@ -42,7 +42,7 @@ that is not theirs.
 exist, so nothing is disclosed -- a payment that has not confirmed is 409 and
 produces no file, and a confirmed one downloads a PDF named after its reference
 that parses, names both usernames, is byte-identical when downloaded twice, and
-contains no wallet address at all.
+contains neither a wallet address nor the payment's transaction hash.
 
 `e2e:shielded` is the one that answers the question the others cannot: does a
 private payment actually work? It drives `src/lib/client/shielded.ts` -- the same

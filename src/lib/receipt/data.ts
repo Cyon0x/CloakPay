@@ -10,8 +10,10 @@ import { activeChain } from "@/config/chain";
  * the things a person needs to recognise a payment — and no addressing detail.
  *
  * The transaction hash is kept because a receipt is also a reconciliation
- * document: support can match it against the chain. It is rendered as plain
- * text, never as a link, so the receipt stays self-contained.
+ * document: support can match it against the chain from the payment record. It
+ * is deliberately not part of a receipt anybody sees — not on the in-app page,
+ * not in the PDF — so no document handed to a user carries a way to look the
+ * payment up on a public ledger.
  */
 export type ReceiptStatus = "pending" | "submitted" | "confirmed" | "failed" | "expired";
 
@@ -26,6 +28,11 @@ export interface ReceiptData {
   note: string | null;
   createdAt: Date;
   confirmedAt: Date | null;
+  /**
+   * Held for reconciliation, never rendered. A receipt shows no transaction
+   * hash, so this field exists only so the loader can be explicit about what it
+   * reads and leaves out.
+   */
   txHash: string | null;
   chainName: string;
   /** Whether this payment has reached a state a completed receipt can describe. */

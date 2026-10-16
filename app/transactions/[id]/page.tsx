@@ -49,7 +49,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             symbol={receipt.asset}
             createdAt={receipt.createdAt.toISOString()}
             note={receipt.note}
-            txHash={receipt.txHash}
             chainName={receipt.chainName}
             downloadable={receipt.complete}
           >
@@ -61,7 +60,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           <div style={{ marginTop: 16 }}>
             <Notice tone="info" title={receipt.complete ? "How to read this receipt" : "This payment is not complete"}>
               {receipt.complete
-                ? `The reference above is the payment's id inside CloakPay, and the transaction reference is what the network recorded for it. Testing happens on a public test network, so a payment made here is not private: the chain can show that an address paid an address. What it does not show is who that address belongs to — CloakPay keeps the link between a username and an address to itself, and no receipt ever prints an address.`
+                ? `The reference above is the payment's id inside CloakPay, and it is the only reference you need to quote to support. This receipt deliberately carries no wallet address and no transaction hash: it records the payment, and it is not a pointer anybody can follow to a wallet or to an explorer. Testing happens on a public test network, so a transfer made here can still be seen on chain — but your receipt does not carry the means to look it up.`
                 : "CloakPay only issues a completed receipt for a payment the network has confirmed. Nothing is downloaded for a payment in another state, because a receipt is a claim that money moved."}
             </Notice>
           </div>

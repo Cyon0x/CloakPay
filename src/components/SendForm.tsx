@@ -149,7 +149,6 @@ export function SendForm({
           symbol={symbol}
           createdAt={startedAt ?? new Date().toISOString()}
           note={note.trim() || null}
-          txHash={state.txHash}
           chainName="Elysium Testnet"
           downloadable={confirmed}
         />
