@@ -6,9 +6,10 @@
  * only a real receipt moves the record to confirmed. A broadcast that never
  * confirms stays submitted, because that is what it actually is.
  *
- * Nothing here touches the shielded pool. A shielded settlement needs a
- * deployed pool and a proof, and this app says so rather than dressing a
- * visible transfer up as a private one.
+ * A settlement runs the transfer path the account actually supports. Nothing
+ * here touches the shielded path, which needs a deployed pool and a proof this
+ * app does not yet have, and nothing here shows a wallet address or a
+ * transaction hash to the person paying.
  */
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
@@ -29,8 +30,8 @@ export type SettlementState =
   | { phase: "preparing" }
   | { phase: "ready"; intent: SettlementIntent }
   | { phase: "signing" }
-  | { phase: "submitted"; intent: SettlementIntent; txHash: Hex }
-  | { phase: "confirmed"; intent: SettlementIntent; txHash: Hex; blockNumber: bigint | null }
+  | { phase: "submitted"; intent: SettlementIntent; txHash: Hex; at: string }
+  | { phase: "confirmed"; intent: SettlementIntent; txHash: Hex; blockNumber: bigint | null; at: string }
   | { phase: "failed"; message: string; intent?: SettlementIntent; txHash?: Hex };
 
 async function patchPayment(paymentId: string, body: Record<string, unknown>) {
@@ -91,13 +92,14 @@ export function useSettlement() {
           to: intent.to,
           amountWei: BigInt(intent.amountWei),
         });
-        setState({ phase: "submitted", intent, txHash });
+        const at = new Date().toISOString();
+        setState({ phase: "submitted", intent, txHash, at });
         await patchPayment(intent.paymentId, { status: "submitted", txHash });
 
         const receipt = await awaitReceipt(txHash);
         if (receipt.status === "success") {
           await patchPayment(intent.paymentId, { status: "confirmed", txHash });
-          setState({ phase: "confirmed", intent, txHash, blockNumber: receipt.blockNumber });
+          setState({ phase: "confirmed", intent, txHash, blockNumber: receipt.blockNumber, at });
         } else if (receipt.status === "reverted") {
           await patchPayment(intent.paymentId, {
             status: "failed",

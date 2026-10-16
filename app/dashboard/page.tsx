@@ -78,7 +78,8 @@ export default async function DashboardPage() {
             <div style={{ padding: 20 }}>
               <p className="table-head">Pay someone</p>
               <p className="tiny muted" style={{ marginTop: 8 }}>
-                Send {activeChain.nativeToken.symbol} to another CloakPay user by typing their username.
+                Send {activeChain.nativeToken.symbol} to another CloakPay user by typing their username —
+                their wallet address stays private.
               </p>
               <Link href="/send" className="btn btn-primary btn-sm" style={{ marginTop: 14 }}>
                 <Icon name="send" size={14} />
@@ -102,7 +103,8 @@ export default async function DashboardPage() {
             <div style={{ padding: 20 }}>
               <p className="table-head">Get paid</p>
               <p className="tiny muted" style={{ marginTop: 8 }}>
-                Share @{user.username} and other CloakPay users can pay you.
+                Share @{user.username} and other CloakPay users can pay you without ever seeing your wallet
+                address.
               </p>
               <Link href="/receive" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
                 <Icon name="receive" size={14} />
@@ -167,9 +169,9 @@ export default async function DashboardPage() {
         <section style={{ marginTop: 28 }}>
           <div className="stack">
             <ComingSoon
-              title="Shielded Pool"
-              icon="shield"
-              body="Private payments are coming soon."
+              title="Swap"
+              icon="swap"
+              body="Exchange between assets inside CloakPay."
             />
             <ComingSoon
               title="External Transfer"

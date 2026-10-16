@@ -1,9 +1,8 @@
 import React, { useCallback, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { api } from "../../src/api";
-import { explorerTx } from "../../src/chain";
 import { Badge, Card, EmptyState, Loading } from "../../src/components/ui";
 import { formatWei } from "../../src/format";
 import { color, space, type } from "../../src/theme";
@@ -41,8 +40,7 @@ export default function Activity() {
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.title}>Activity</Text>
         <Text style={styles.sub}>
-          Every payment you sent or received. Private payments carry a Private badge; ordinary transfers are
-          labelled Public.
+          Every payment you sent or received, with its real status.
         </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -67,13 +65,6 @@ export default function Activity() {
                     {payment.created_at.slice(0, 16).replace("T", " ")}
                     {payment.note ? ` · ${payment.note}` : ""}
                   </Text>
-                  {payment.tx_hash ? (
-                    <Pressable onPress={() => Linking.openURL(explorerTx(payment.tx_hash as string))}>
-                      <Text style={styles.link}>Open on the explorer</Text>
-                    </Pressable>
-                  ) : (
-                    <Text style={styles.rowMeta}>No on-chain record yet</Text>
-                  )}
                 </View>
                 <Text style={styles.amount}>
                   {payment.direction === "sent" ? "−" : "+"}
@@ -85,9 +76,8 @@ export default function Activity() {
         )}
 
         <Text style={styles.footnote}>
-          A private payment has no single public transfer that corresponds to it. Where a hash exists it is
-          the deposit into the pool; the withdrawal that pays the recipient is a separate transaction the
-          chain cannot connect to it.
+          Payments between CloakPay users are private payments: they travel by username, and no wallet
+          address or transaction hash is shown to either side.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -107,6 +97,5 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   amount: { ...type.body, color: color.ink900, fontVariant: ["tabular-nums"] },
   divider: { borderTopWidth: 1, borderTopColor: color.lineSoft },
-  link: { ...type.tiny, color: color.accent700, textDecorationLine: "underline" },
   footnote: { ...type.tiny, color: color.slate500, marginTop: space.xl, lineHeight: 18 },
 });

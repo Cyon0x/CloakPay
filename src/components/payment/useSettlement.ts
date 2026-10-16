@@ -5,7 +5,6 @@ import { unlockWallet } from "@/lib/client/wallet";
 import { awaitReceipt, broadcastNativeTransfer, describeTransferError } from "@/lib/client/transfer";
 import { ShieldedError, payUsername, spendableNotes } from "@/lib/client/shielded";
 import { fieldToHex } from "@/protocol/field";
-import { denominationById } from "@/config/pool";
 import type { Hex } from "viem";
 
 export interface SettlementIntent {
@@ -47,11 +46,8 @@ async function patchPayment(
 }
 
 /** The message a user should see when the private path cannot even start. */
-function privateRequirement(denominationId: string | null): string {
-  const denomination = denominationId ? denominationById(denominationId) : undefined;
-  const size = denomination ? denomination.label : "that amount";
-  return `You have no spendable ${size} note. Deposit one into the shielded pool on the Privacy page first.`;
-}
+const PRIVATE_UNAVAILABLE =
+  "This payment is set up to be made privately, and that option is not open yet. Send a standard CloakPay payment instead.";
 
 /**
  * Drives one settlement end to end, along whichever of the two paths it is.
@@ -119,7 +115,7 @@ export function useSettlement() {
         const notes = await spendableNotes(secret);
         const note = notes.find((item) => item.note.denominationId === intent.denominationId);
         if (!note) {
-          setState({ phase: "failed", message: privateRequirement(intent.denominationId), intent });
+          setState({ phase: "failed", message: PRIVATE_UNAVAILABLE, intent });
           return;
         }
 

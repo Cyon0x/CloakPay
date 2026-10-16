@@ -9,16 +9,35 @@ import { activeChain } from "@/config/chain";
 /**
  * The landing page.
  *
- * Written for someone deciding whether to use CloakPay: what it does, the one
- * thing they would actually do with it, and which features are not here yet.
- * The pool's design and the rest of the engineering are in `docs/`, not on this
- * page.
+ * Written for someone deciding whether to use CloakPay: what it is, the problem
+ * it exists for, what a user does with it, and what is on the way. The shielded
+ * pool's construction -- circuits, commitments, proofs, the contract -- is
+ * documented in `docs/PRIVACY_PROTOCOL.md` and `docs/ARCHITECTURE.md`, and none
+ * of it belongs on this page.
  */
+const PROBLEMS = [
+  {
+    icon: "wallet",
+    title: "Addresses are easy to get wrong",
+    body: "Copying a long wallet address by hand is slow, and one mistyped character can send funds into nothing.",
+  },
+  {
+    icon: "shield",
+    title: "Every payment is on show",
+    body: "A public address carries its history, so anyone who looks can see who was paid, how much and how often.",
+  },
+  {
+    icon: "user",
+    title: "It should feel like sending money",
+    body: "Paying someone you know should not mean thinking about wallets at all.",
+  },
+];
+
 const LIVE = [
   {
     icon: "user",
-    title: "Send and receive by username",
-    body: "Find people by their CloakPay username and pay them by typing it.",
+    title: "Private payments between CloakPay users",
+    body: "Pay a username. The person you pay never sees your wallet address, and you never see theirs.",
     href: "/how-it-works",
   },
   {
@@ -34,16 +53,34 @@ const LIVE = [
     href: "/security",
   },
   {
-    icon: "shield",
-    title: "Shielded pool \u2014 coming soon",
-    body: "Private payments are coming soon.",
-    href: "/privacy",
+    icon: "swap",
+    title: "Swap \u2014 coming soon",
+    body: "Exchange between assets inside CloakPay.",
+    href: null,
   },
   {
     icon: "external",
     title: "External transfer \u2014 coming soon",
-    body: "Sending to a wallet outside CloakPay is coming soon.",
+    body: "Paying out to a wallet that is not a CloakPay account.",
     href: "/receive",
+  },
+];
+
+const PRIVACY = [
+  {
+    icon: "user",
+    title: "Names, not addresses",
+    body: "You pay @someone. The address behind the name never enters the conversation.",
+  },
+  {
+    icon: "lock",
+    title: "Your address stays yours",
+    body: "Your receiving address is kept for funds arriving from outside CloakPay. It is not published on your profile, your payments or your receipts.",
+  },
+  {
+    icon: "search",
+    title: "Nothing to look up",
+    body: "No address to paste, and nothing to go looking for elsewhere. The payment and its receipt tell you everything you need.",
   },
 ];
 
@@ -75,8 +112,8 @@ export default async function LandingPage() {
             <div className="hero-copy">
               <h1>Pay someone by username, not by wallet address.</h1>
               <p className="lede">
-                CloakPay makes sending and receiving payments simpler. Sign in with Google or X, claim a
-                username, and send money by typing it.
+                CloakPay is a privacy-focused way to pay on {activeChain.name}. Sign in with Google or X,
+                claim a username, and send money by typing it — no address to copy, share or check.
               </p>
               {/* Both actions open the one sign-in route. A first-time
                   identity is created by the OAuth callback, so "Create account"
@@ -107,25 +144,18 @@ export default async function LandingPage() {
         <section className="section">
           <div className="shell">
             <div className="section-intro">
-              <p className="eyebrow">What you can do today</p>
-              <h2>Simple payments, by username.</h2>
-              <p className="lede">
-                Everything you need to send and receive on {activeChain.name}.
-              </p>
+              <p className="eyebrow">The problem</p>
+              <h2>Blockchain payments are harder — and more public — than they should be.</h2>
             </div>
-            <div className="grid-2" style={{ marginTop: 28 }}>
-              {LIVE.map((item) => (
-                <Link key={item.title} href={item.href} className="card-flat feature feature-link">
+            <div className="grid-3" style={{ marginTop: 28 }}>
+              {PROBLEMS.map((item) => (
+                <article key={item.title} className="card-flat feature">
                   <span className="feature-icon">
                     <Icon name={item.icon} size={17} />
                   </span>
                   <h3>{item.title}</h3>
                   <p>{item.body}</p>
-                  <span className="feature-more">
-                    Read more
-                    <Icon name="arrowRight" size={14} strokeWidth={1.8} />
-                  </span>
-                </Link>
+                </article>
               ))}
             </div>
           </div>
@@ -134,11 +164,82 @@ export default async function LandingPage() {
         <section className="section">
           <div className="shell">
             <div className="section-intro">
+              <p className="eyebrow">What CloakPay does</p>
+              <h2>Simple payments, by username.</h2>
+              <p className="lede">
+                Everything you need to send and receive on {activeChain.name}.
+              </p>
+            </div>
+            <div className="grid-2" style={{ marginTop: 28 }}>
+              {LIVE.map((item) =>
+                item.href ? (
+                  <Link key={item.title} href={item.href} className="card-flat feature feature-link">
+                    <span className="feature-icon">
+                      <Icon name={item.icon} size={17} />
+                    </span>
+                    <h3>{item.title}</h3>
+                    <p>{item.body}</p>
+                    <span className="feature-more">
+                      Read more
+                      <Icon name="arrowRight" size={14} strokeWidth={1.8} />
+                    </span>
+                  </Link>
+                ) : (
+                  // A destination that does not exist yet is a card, not a
+                  // link: nothing here should take a click to nowhere.
+                  <article key={item.title} className="card-flat feature">
+                    <span className="feature-icon">
+                      <Icon name={item.icon} size={17} />
+                    </span>
+                    <h3>{item.title}</h3>
+                    <p>{item.body}</p>
+                  </article>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="shell">
+            <div className="section-intro">
+              <p className="eyebrow">Privacy</p>
+              <h2>Payments that keep to themselves.</h2>
+              <p className="lede">
+                CloakPay is built for people, companies, DAOs and organisations that would rather not make
+                every financial interaction public. A payment between two CloakPay users is a private
+                payment: it travels by username, and neither side ever sees the other's wallet address.
+                Nothing on screen shows an address or a transaction hash, and nothing printed on a receipt
+                does either.
+              </p>
+            </div>
+            <div className="grid-3" style={{ marginTop: 28 }}>
+              {PRIVACY.map((item) => (
+                <article key={item.title} className="card-flat feature">
+                  <span className="feature-icon">
+                    <Icon name={item.icon} size={17} />
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+            <p className="tiny muted" style={{ marginTop: 20 }}>
+              A payment still settles on {activeChain.name}, a public test network, so the two addresses and
+              the amount remain visible on chain. What CloakPay keeps to itself is the link between a username
+              and an address.{" "}
+              <Link href="/privacy" className="link">
+                More about privacy
+              </Link>
+            </p>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="shell">
+            <div className="section-intro">
               <p className="eyebrow">Getting started</p>
               <h2>Four steps to your first payment</h2>
-              <p className="lede">
-                Shielded payments are still being finished. Everything below works today.
-              </p>
             </div>
             <div className="grid-2" style={{ marginTop: 28 }}>
               {STEPS.map((step, index) => (

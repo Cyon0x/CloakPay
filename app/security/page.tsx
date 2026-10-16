@@ -81,8 +81,9 @@ export default async function SecurityPage() {
                 balances may be wiped.
               </li>
               <li>
-                Paying by username is not private. A payment today is an ordinary transfer, visible on chain
-                to anyone who looks.
+                A payment still settles on chain, so the two addresses and the amount are visible to anyone
+                who looks. Keeping a username apart from an address is what CloakPay adds on top, and it is
+                the whole of the privacy it offers today.
               </li>
               <li>
                 The passphrase protecting your encrypted wallet is the weakest link; a short or reused one can

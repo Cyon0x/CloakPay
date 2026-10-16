@@ -86,7 +86,7 @@ export const badgeTone = {
 
 export const BADGE_LABEL: Record<string, string> = {
   private: "Private",
-  public: "Public",
+  public: "By username",
   pending: "Pending",
   submitted: "Submitted",
   confirmed: "Confirmed",

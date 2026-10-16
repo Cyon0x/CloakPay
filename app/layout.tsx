@@ -3,9 +3,9 @@ import "./globals.css";
 
 /**
  * Copy shown to search engines and link previews says the same thing the page
- * does. Today that is one payment: to another CloakPay user, by username, as an
- * ordinary transfer on a test network. The shielded pool is built and is not on
- * offer, so the description must not claim a private payment either.
+ * does: CloakPay is a privacy-focused way to pay, and a payment between two
+ * CloakPay users travels by username without either side seeing the other's
+ * wallet address.
  */
 export const metadata: Metadata = {
   title: {
@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     template: "%s · CloakPay",
   },
   description:
-    "Pay someone by CloakPay username instead of a wallet address. Testnet only, unaudited.",
+    "Pay someone by CloakPay username, not a wallet address. A private payment on Elysium. Testnet only, unaudited.",
   applicationName: "CloakPay",
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3200"),
   openGraph: {
     title: "CloakPay",
     description:
-      "Pay someone by username instead of a wallet address, on Elysium. Sign in with Google or X and there is no address to copy.",
+      "Pay someone by username instead of a wallet address, on Elysium. No address to copy, no address shared — a private payment between CloakPay users.",
     type: "website",
   },
   twitter: {

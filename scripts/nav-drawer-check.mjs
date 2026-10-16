@@ -33,7 +33,6 @@ const EXPECTED = [
   "Activities",
   "All transactions",
   "Payment links",
-  "Privacy",
   "Faucet",
   "Profile",
   "Settings",
@@ -324,7 +323,7 @@ try {
     JSON.stringify(publicPages),
   );
 
-  // ── the paused features, and the one address ──────────────────────────────
+  // ── what the interface shows, and the one address ─────────────────────────
   //
   // Read back from the rendered page rather than from the markup. Passing an
   // address into a client component so it can read the balance is not the same
@@ -342,29 +341,33 @@ try {
     JSON.stringify(addressShown),
   );
 
-  const paused = await evaluate(`(async () => {
+  const surfaces = await evaluate(`(async () => {
     const out = {};
-    for (const path of ['/dashboard', '/send', '/privacy']) {
+    const paths = ['/dashboard', '/send', '/receive', '/settings', '/links/new', '/privacy', '/', '/how-it-works'];
+    for (const path of paths) {
       const html = await (await fetch(path)).text();
       out[path] = {
-        shield: /Shielded Pool/.test(html),
+        pool: /shielded/i.test(html),
         external: /External Transfer/.test(html),
+        swap: /Swap/.test(html),
         soon: /Coming soon/i.test(html),
       };
     }
     return out;
   })()`);
   record(
-    "the dashboard and the send page both mark both paused features as coming soon",
-    ["/dashboard", "/send"].every(
-      (path) => paused[path]?.shield === true && paused[path]?.external === true && paused[path]?.soon === true,
-    ),
-    JSON.stringify(paused),
+    "the shielded pool appears nowhere in the interface",
+    Object.values(surfaces).every((said) => said.pool === false),
+    JSON.stringify(surfaces),
   );
   record(
-    "the privacy page marks the pool as coming soon",
-    paused["/privacy"]?.shield === true && paused["/privacy"]?.soon === true,
-    JSON.stringify(paused["/privacy"]),
+    "Swap and External Transfer are marked coming soon where they appear",
+    surfaces["/dashboard"]?.swap === true &&
+      surfaces["/dashboard"]?.soon === true &&
+      surfaces["/dashboard"]?.external === true &&
+      surfaces["/send"]?.external === true &&
+      surfaces["/send"]?.soon === true,
+    JSON.stringify(surfaces["/dashboard"]),
   );
 
   console.log("\nsigned-out routing");

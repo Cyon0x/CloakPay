@@ -86,18 +86,19 @@ export default function Checkout() {
   const privateRequested = current.mode === "private";
 
   if (settlement.state.phase === "confirmed" || settlement.state.phase === "submitted") {
-    const { intent, txHash } = settlement.state;
+    const { intent } = settlement.state;
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.eyebrow}>Receipt</Text>
           <Card style={styles.card}>
             <Receipt
+              receiptId={intent.paymentId}
               amountLabel={formatWei(BigInt(intent.amountWei))}
-              txHash={txHash}
               status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
-              blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
-              recipient={current.recipient.username ?? "recipient"}
+              fromUsername={user?.username ?? "you"}
+              toUsername={current.recipient.username ?? "recipient"}
+              createdAt={settlement.state.at}
             />
           </Card>
           <Link href="/(tabs)" asChild>
@@ -156,10 +157,9 @@ export default function Checkout() {
             </Link>
           </>
         ) : privateRequested && !privateReady ? (
-          <Notice tone="warn" title="This link asks for a private payment">
-            Its owner requested a shielded payment. The pool is deployed, but the deposit and withdrawal
-            flow is still being built. CloakPay will not settle it as a public transfer, because that would
-            not be the payment that was asked for.
+          <Notice tone="warn" title="This request cannot be paid yet">
+            It is set up for a payment type that is not open yet. Ask the owner to send you a standard
+            CloakPay link.
           </Notice>
         ) : settlement.state.phase === "failed" ? (
           <>
@@ -186,8 +186,7 @@ export default function Checkout() {
             >
               <View style={[styles.checkbox, understood && styles.checkboxOn]} />
               <Text style={styles.checkLabel}>
-                I understand this is a public transfer. The amount, my wallet and theirs are all visible on
-                chain.
+                I understand this payment settles on chain, where the amount is visible.
               </Text>
             </Pressable>
             <View style={styles.actions}>

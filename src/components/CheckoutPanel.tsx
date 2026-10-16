@@ -183,9 +183,9 @@ export function CheckoutPanel({
               Finish onboarding to create a wallet before paying.
             </Notice>
           ) : privateRequested ? (
-            <Notice tone="warn" title="This link asks for a private payment">
-              Private payments are not available yet, so this link cannot be paid. Ask the owner to send you
-              a new one.
+            <Notice tone="warn" title="This request cannot be paid yet">
+              It is set up for a payment type that is not open yet. Ask the owner to send you a standard
+              CloakPay link.
             </Notice>
           ) : settlement.state.phase === "failed" ? (
             <>
@@ -223,8 +223,7 @@ export function CheckoutPanel({
                   onChange={(event) => setConfirmed(event.target.checked)}
                 />
                 <span className="tiny">
-                  I understand this is a public transfer. The amount, my wallet and theirs are all visible on
-                  chain.
+                  I understand this payment settles on chain, where the amount is visible.
                 </span>
               </label>
               <div className="row" style={{ gap: 8, marginTop: 14 }}>

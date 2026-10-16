@@ -21,10 +21,9 @@ interface DrawerItem {
   label: string;
   icon: string;
   /**
-   * Set on a destination whose feature is paused. The page still exists and is
-   * still worth reading -- it says what the feature does and that it is not
-   * available -- so the drawer keeps the link and labels it, rather than
-   * hiding a page that answers the question the user is asking.
+   * Set on a destination whose feature is not open yet. The page still exists
+   * and is still worth reading, so the drawer keeps the link and labels it
+   * rather than hiding a page that answers the question the user is asking.
    */
   soon?: boolean;
 }
@@ -53,7 +52,7 @@ const MOBILE_ITEMS = [
 
 const PUBLIC_ITEMS = [
   { href: "/how-it-works", label: "How it works" },
-  { href: "/security", label: "Privacy" },
+  { href: "/security", label: "Security" },
   { href: "/faq", label: "FAQ" },
 ];
 
@@ -144,7 +143,6 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
         { href: "/activity", label: "Activities", icon: "activity" },
         { href: "/transactions", label: "All transactions", icon: "list" },
         { href: "/links", label: "Payment links", icon: "link" },
-        { href: "/privacy", label: "Privacy", icon: "shield", soon: true },
         { href: "/faucet", label: "Faucet", icon: "gift" },
         user.username
           ? { href: `/u/${user.username}`, label: "Profile", icon: "user" }

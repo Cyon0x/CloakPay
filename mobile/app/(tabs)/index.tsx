@@ -9,7 +9,6 @@ import { Badge, Button, Card, EmptyState, Loading, StatRow } from "../../src/com
 import { Lockup } from "../../src/components/Logo";
 import { activeChain } from "../../src/chain";
 import { readBalance } from "../../src/transfer";
-import { loadPool, type PoolInfo } from "../../src/pool";
 import { formatWei } from "../../src/format";
 import { color, space, type } from "../../src/theme";
 
@@ -35,20 +34,17 @@ export default function Dashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [balance, setBalance] = useState<bigint | null>(null);
-  const [pool, setPool] = useState<PoolInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [paymentData, walletData, poolData] = await Promise.all([
+      const [paymentData, walletData] = await Promise.all([
         api<{ payments: Payment[] }>("/api/payments"),
         api<{ wallet: WalletInfo | null }>("/api/wallet"),
-        loadPool(),
       ]);
       setPayments(paymentData.payments.slice(0, 5));
       setWallet(walletData.wallet);
-      setPool(poolData);
       if (walletData.wallet?.address) {
         setBalance(await readBalance(walletData.wallet.address as `0x${string}`));
       }
@@ -119,13 +115,9 @@ export default function Dashboard() {
           />
           <View style={styles.divider} />
           <StatRow
-            label="Private payments"
-            value={pool?.pool.privateReady ? "Available" : "Unavailable"}
-            hint={
-              pool?.pool.privateReady
-                ? "Send to a username through the shielded pool"
-                : "The shielded pool is deployed, but the deposit and withdrawal flow is still being built"
-            }
+            label="Swap"
+            value="Coming soon"
+            hint="Exchange between assets inside CloakPay."
           />
         </Card>
 

@@ -115,14 +115,6 @@ export default function Receive() {
         </Card>
 
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Shielded pool — coming soon</Text>
-          <Text style={styles.muted}>
-            Private payments are coming soon. Until then, payments to @{username} arrive as ordinary
-            transfers.
-          </Text>
-        </Card>
-
-        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Receive from external wallet</Text>
           {wallet?.address ? (
             <>

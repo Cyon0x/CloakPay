@@ -7,7 +7,6 @@ import { Card, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { AMOUNT_PRESETS, validateAmount } from "@/lib/amount";
 import { AmountInput } from "./payment/AmountInput";
-import { ComingSoon } from "@/components/ComingSoon";
 import { CopyField } from "./CopyField";
 import { QrCode } from "./QrCode";
 
@@ -63,7 +62,7 @@ export function LinkComposer({
           // A link makes no claim about how it settles, because the only way
           // to settle one now is an ordinary transfer between two CloakPay
           // accounts. `record` is that statement, and the server refuses a
-          // request for a private link while the pool is paused.
+          // request for a private link while that path is switched off.
           mode: "record",
           reusable: !oneTime,
           maxUses: oneTime ? 1 : undefined,
@@ -156,12 +155,6 @@ export function LinkComposer({
             presets={AMOUNT_PRESETS}
             label={`Amount in ${symbol}`}
             hint="Leave this empty for a link the payer decides the amount on."
-          />
-
-          <ComingSoon
-            title="Private payment links"
-            icon="shield"
-            body="Private payment links are coming soon."
           />
 
           <fieldset className="fieldset">

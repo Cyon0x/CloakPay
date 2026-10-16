@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { QrCode } from "@/components/QrCode";
 import { CopyField } from "@/components/CopyField";
-import { ComingSoon } from "@/components/ComingSoon";
 import { CopyButton } from "@/components/CopyButton";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { db } from "@/lib/db";
@@ -98,12 +97,6 @@ export default async function ReceivePage() {
                 )}
               </div>
             </Card>
-
-            <ComingSoon
-              title="Shielded Pool"
-              icon="shield"
-              body="Private payments are coming soon."
-            />
 
             <Notice tone="info" title="Money coming in">
               Payments arrive as soon as the network confirms them. Funds sent from outside CloakPay land at

@@ -278,8 +278,8 @@ export function SendForm({
                   </label>
                   <p className="tiny muted">
                     Signing sends {formatWei(BigInt(settlement.state.intent.amountWei))} {symbol} to
-                    @{recipient?.username} on {symbol}&apos;s test network. It is a normal public transfer:
-                    the chain shows that one address paid another, though not who either belongs to.
+                    @{recipient?.username} by username. No wallet address and no transaction hash is shown
+                    here or on the receipt; the transfer itself still settles on the {symbol} test network.
                   </p>
                   <button
                     className="btn btn-primary btn-block"
@@ -347,11 +347,6 @@ export function SendForm({
           title="External Transfer"
           icon="external"
           body="Sending to a wallet outside CloakPay is coming soon."
-        />
-        <ComingSoon
-          title="Shielded Pool"
-          icon="shield"
-          body="Private payments are coming soon."
         />
       </div>
     </div>

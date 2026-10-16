@@ -8,7 +8,7 @@ const SECTIONS: [string, string][] = [
   ["Testnet software", `CloakPay runs on ${activeChain.name}. It is experimental, unaudited software. The tokens it handles have no monetary value. Do not send anything you cannot afford to lose.`],
   ["No custody of your wallet", "Your wallet is self-custodial. CloakPay stores an encrypted copy of your secret material, but it cannot open it, cannot sign on your behalf, and cannot recover your funds if you lose both your passphrase and your mnemonic."],
   ["Your responsibilities", "Keep your mnemonic offline and your passphrase strong and unique. Anyone who obtains them can spend your funds."],
-  ["Coming soon", "External transfers and the shielded pool are not available yet. Neither can be started from the interface or through the API. When the shielded pool is offered, private payments will be handled by a smart contract, and a defect in it could cause loss of funds."],
+  ["Coming soon", "External transfers and Swap are not open yet, and neither can be started from the interface. CloakPay will say so here when that changes."],
   ["Privacy limits", "CloakPay does not guarantee anonymity. A payment made today is an ordinary transfer on a public testnet and can be seen on chain."],
   ["Acceptable use", "Do not use CloakPay to break the law, to evade lawful obligations, or to move funds you do not own. You are responsible for complying with the rules that apply to you."],
   ["Availability", "The service may be unavailable, the testnet may be reset, and balances may be wiped by the network. No warranty is given of any kind."],

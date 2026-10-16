@@ -143,7 +143,7 @@ export function poolStatus(chainId: number): PoolStatus {
 export function poolStatusSentence(chainId: number): string {
   switch (poolStatus(chainId)) {
     case "paused":
-      return "Private payments are coming soon.";
+      return "Private transfers are not available yet.";
     case "ready":
       return "The shielded pool is live.";
     case "in-development":

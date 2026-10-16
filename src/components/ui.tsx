@@ -4,7 +4,7 @@ export type PrivacyKind = "private" | "public" | "pending" | "failed" | "ok" | "
 
 const PRIVACY_LABELS: Record<string, string> = {
   private: "Private",
-  public: "Public",
+  public: "By username",
   pending: "Pending",
   failed: "Failed",
   confirmed: "Confirmed",
@@ -27,8 +27,9 @@ const PRIVACY_CLASS: Record<string, string> = {
 };
 
 /**
- * The privacy label reflects what actually happened on chain. A payment is only
- * ever labelled "Private" when the shielded flow completed for it.
+ * The badge says how the payment was made, not what the chain can see. A
+ * username payment is labelled by its route; nothing is ever labelled
+ * "Private" unless a private settlement actually completed for it.
  */
 export function Badge({ kind, children }: { kind: string; children?: ReactNode }) {
   const cls = PRIVACY_CLASS[kind] ?? "badge-public";

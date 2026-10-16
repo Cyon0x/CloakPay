@@ -4,7 +4,6 @@ import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { listIdentities } from "@/lib/auth/accounts";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
-import { ComingSoon } from "@/components/ComingSoon";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -94,11 +93,6 @@ export default async function SettingsPage() {
                 </p>
               </div>
             </Card>
-            <ComingSoon
-              title="Shielded Pool"
-              icon="shield"
-              body="Private payments are coming soon."
-            />
             <Card>
               <div style={{ padding: 20 }}>
                 <p className="table-head">Notifications</p>

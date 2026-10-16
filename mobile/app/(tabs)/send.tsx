@@ -24,9 +24,9 @@ interface WalletResponse {
 /**
  * Send.
  *
- * The private option is only offered when the shielded pool is actually
- * deployed. While it is not, the picker says so and a direct transfer runs
- * under a Public label, because that is what it is.
+ * A payment to another CloakPay user is made by username. The person being paid
+ * is never shown a wallet address, and no address or transaction hash is shown
+ * here either.
  */
 export default function Send() {
   const { user } = useAuth();
@@ -35,7 +35,9 @@ export default function Send() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [denominationId, setDenominationId] = useState("");
-  const [privacy, setPrivacy] = useState<Privacy>("public");
+  // A payment between CloakPay users travels by username and settles as a direct
+  // transfer, and the record is written to say exactly that.
+  const privacy: Privacy = "public";
   const [note, setNote] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [balance, setBalance] = useState<bigint | null>(null);
@@ -51,7 +53,6 @@ export default function Send() {
         setPool(poolData);
         setWalletAddress(walletData.wallet?.address ?? null);
         setDenominationId(poolData.pool.denominations[1]?.id ?? poolData.pool.denominations[0]?.id ?? "");
-        setPrivacy(poolData.pool.privateReady ? "private" : "public");
       } catch (error) {
         setLoadError((error as Error).message);
       }
@@ -80,18 +81,19 @@ export default function Send() {
   if (!pool && !loadError) return <Loading label="Loading your wallet" />;
 
   if (settlement.state.phase === "confirmed" || settlement.state.phase === "submitted") {
-    const { intent, txHash } = settlement.state;
+    const { intent } = settlement.state;
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.eyebrow}>Receipt</Text>
           <Card style={styles.card}>
             <Receipt
+              receiptId={intent.paymentId}
               amountLabel={formatWei(BigInt(intent.amountWei))}
-              txHash={txHash}
               status={settlement.state.phase === "confirmed" ? "confirmed" : "submitted"}
-              blockNumber={settlement.state.phase === "confirmed" ? settlement.state.blockNumber : null}
-              recipient={recipient?.username ?? "recipient"}
+              fromUsername={user?.username ?? "you"}
+              toUsername={recipient?.username ?? "recipient"}
+              createdAt={settlement.state.at}
             />
           </Card>
           <Button
@@ -153,7 +155,7 @@ export default function Send() {
 
         {loadError ? (
           <View style={styles.card}>
-            <Notice tone="error" title="Could not load the pool">
+            <Notice tone="error" title="Could not load payment options">
               {loadError}
             </Notice>
           </View>
@@ -193,49 +195,17 @@ export default function Send() {
             })}
           </View>
           <Text style={styles.hint}>
-            The pool takes fixed sizes only. Fixed denominations keep amounts from giving away which payment
-            is which.
+            Choose one of the fixed amounts. Both sides see the same number.
           </Text>
         </Card>
 
         <Card style={styles.card}>
           <Text style={styles.label}>How it settles</Text>
-          <View style={styles.choiceRow}>
-            <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ selected: privacy === "private", disabled: !pool?.pool.privateReady }}
-              disabled={!pool?.pool.privateReady}
-              onPress={() => setPrivacy("private")}
-              style={[
-                styles.choice,
-                privacy === "private" && styles.choiceOn,
-                !pool?.pool.privateReady && styles.choiceDisabled,
-              ]}
-            >
-              <Text style={[styles.choiceTitle, privacy === "private" && styles.choiceTitleOn]}>Private</Text>
-              <Text style={[styles.choiceBody, privacy === "private" && styles.choiceBodyOn]}>
-                Hidden through the shielded pool
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ selected: privacy === "public" }}
-              onPress={() => setPrivacy("public")}
-              style={[styles.choice, privacy === "public" && styles.choiceOn]}
-            >
-              <Text style={[styles.choiceTitle, privacy === "public" && styles.choiceTitleOn]}>Public</Text>
-              <Text style={[styles.choiceBody, privacy === "public" && styles.choiceBodyOn]}>
-                Visible on chain, confirmed in seconds
-              </Text>
-            </Pressable>
-          </View>
-          {!pool?.pool.privateReady ? (
-            <Notice tone="warn" title="Private payments are not available yet">
-              The shielded pool is deployed on {activeChain.name}, but the deposit and withdrawal flow is
-              still being built. CloakPay will not relabel a visible transfer as private, so today only a
-              public transfer can settle.
-            </Notice>
-          ) : null}
+          <Text style={styles.muted}>
+            A payment between CloakPay users is private: it travels by username, and neither side is shown
+            the other&apos;s wallet address. No address or transaction hash appears on this screen or on the
+            receipt.
+          </Text>
         </Card>
 
         <Card style={styles.card}>
@@ -310,9 +280,8 @@ export default function Send() {
         )}
 
         <Text style={styles.foot}>
-          {privacy === "public"
-            ? "This settlement is public. The amount, your wallet and theirs are all visible on chain."
-            : "Private settlement runs through the shielded pool."}
+          Paying @{recipient?.username ?? "a username"} by username. The transfer itself still settles on
+          the {activeChain.name}.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -344,22 +313,6 @@ const styles = StyleSheet.create({
   amountValue: { fontSize: 17, fontWeight: "500", color: color.ink900 },
   amountUnit: { fontSize: 11, letterSpacing: 0.7, color: color.slate500 },
   amountValueSelected: { color: color.paper0 },
-  choiceRow: { flexDirection: "row", gap: space.sm, marginTop: space.sm },
-  choice: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: color.line,
-    borderRadius: radius.md,
-    padding: space.md,
-    backgroundColor: color.paper0,
-    gap: 3,
-  },
-  choiceOn: { borderColor: color.ink900, backgroundColor: color.ink900 },
-  choiceDisabled: { opacity: 0.45 },
-  choiceTitle: { fontSize: 14, fontWeight: "600", color: color.ink900 },
-  choiceTitleOn: { color: color.paper0 },
-  choiceBody: { ...type.tiny, color: color.slate600 },
-  choiceBodyOn: { color: color.slate300 },
   kv: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", paddingVertical: 5 },
   kvValue: { fontSize: 14, fontWeight: "500", color: color.ink900 },
   shortfall: { ...type.tiny, color: color.err600, marginTop: space.sm },
