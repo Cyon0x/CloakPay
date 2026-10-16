@@ -31,19 +31,27 @@ not store a refresh token.
 
 ## 3. X sign-in
 
-1. In the X developer portal, open your app's **User authentication settings**.
-2. Set the app type to *Web App, Automated App or Bot*, and enable **OAuth 2.0**
-   with the *Confidential client* type.
-3. Request the `users.read` scope.
-4. Under **Callback URI**, add:
+X sign-in runs on **OAuth 1.0a**. The callback URL is the part that decides
+whether it works, because X checks it before the user sees anything: an
+unapproved callback is refused by `POST /oauth/request_token` with
+`403 ... Callback URL not approved for this client application`, and the
+browser never reaches CloakPay.
+
+1. In the X developer portal, copy the app's **API Key** and **API Key Secret**
+   from **Keys and tokens** into `X_CONSUMER_KEY` and `X_CONSUMER_SECRET`.
+2. Add every origin CloakPay runs on to the app's callback/redirect settings,
+   exactly, with no trailing slash:
    - `http://localhost:3200/api/auth/x/callback`
    - `https://<your-domain>/api/auth/x/callback`
-5. Copy the client id and client secret into `X_CLIENT_ID` and `X_CLIENT_SECRET`.
+3. Run `npm run auth:check` with `APP_URL` set to that origin. It asks X for a
+   request token, which is X itself confirming the key, the secret and the
+   callback URL in one call.
 
-X authenticates the token exchange with HTTP Basic, so the client secret is
-required even with PKCE. A client id alone is not enough, and CloakPay's sign-in
-screen disables the button and names the missing variable rather than failing
-after a redirect.
+`X_OAUTH_VERSION=2` switches X back to OAuth 2.0 with PKCE, which needs
+`X_CLIENT_ID` and `X_CLIENT_SECRET` and the same callback registered under
+**User authentication settings**. Use it if X grants the app OAuth 2.0
+user-context access again; until then X answers `GET /2/users/me` with a `403`
+for an OAuth 2.0 user token, so that flow cannot complete.
 
 > Both buttons are disabled and the reason is shown until the corresponding pair
 > of variables is present. That is intentional: a redirect that fails at the
@@ -103,6 +111,8 @@ GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 X_CLIENT_ID
 X_CLIENT_SECRET
+X_CONSUMER_KEY
+X_CONSUMER_SECRET
 ELYSIUM_RPC_URL
 ELYSIUM_CHAIN_ID
 NEXT_PUBLIC_ELYSIUM_RPC_URL

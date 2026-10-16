@@ -26,11 +26,17 @@ export async function GET(
 
   if (provider !== "google" && provider !== "x") return failure("unknown_provider");
 
-  // A user who cancels at the provider comes back with error=access_denied.
-  if (url.searchParams.get("error")) return failure("cancelled");
+  // A user who cancels comes back as error=access_denied (the OAuth 2.0 flows)
+  // or denied=<request token> (X on OAuth 1.0a).
+  if (url.searchParams.get("error") || url.searchParams.get("denied")) {
+    return failure("cancelled");
+  }
 
-  const state = url.searchParams.get("state");
-  const code = url.searchParams.get("code");
+  // X's OAuth 1.0a callback carries oauth_token and oauth_verifier instead of
+  // state and code. The request token is unguessable, single use, and bound to
+  // the handshake row, so it plays exactly the role `state` plays elsewhere.
+  const state = url.searchParams.get("state") ?? url.searchParams.get("oauth_token");
+  const code = url.searchParams.get("code") ?? url.searchParams.get("oauth_verifier");
   if (!state || !code) return failure("invalid_callback");
 
   const handshake = await consumeState(state, provider);
@@ -38,7 +44,12 @@ export async function GET(
 
   let profile;
   try {
-    profile = await exchangeCode(provider, code, handshake.code_verifier, handshake.redirect_uri);
+    profile = await exchangeCode(provider, {
+      state,
+      code,
+      secret: handshake.code_verifier,
+      redirectUri: handshake.redirect_uri,
+    });
   } catch (error) {
     console.error("[oauth] exchange failed", provider, (error as Error).message);
     return failure("exchange_failed");

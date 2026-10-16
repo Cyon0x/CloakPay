@@ -46,7 +46,8 @@ change or be reassigned.
 **`sessions.token_hash`** stores a SHA-256 hash. The token itself exists only in
 the user's cookie.
 
-**`oauth_states`** holds the PKCE verifier and the return path for one handshake.
+**`oauth_states`** holds the per-handshake secret (the PKCE verifier, or X's
+request-token secret) and the return path for one handshake.
 Rows are consumed once and deleted.
 
 **`wallets.key_envelope`** is a JSONB AEAD envelope. There is no column anywhere

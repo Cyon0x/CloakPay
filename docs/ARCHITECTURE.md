@@ -48,14 +48,21 @@ returns one of two response shapes (`{ok:true,data}` or `{ok:false,error}`).
 
 ## Authentication
 
-Sign-in is an authorization-code flow with PKCE (S256), implemented in
-`src/lib/auth/oauth.ts` rather than pulled from a dependency, because Google and
-X differ in exactly one way that matters: X authenticates its token exchange with
-HTTP Basic, Google puts the secret in the body.
+Google signs in with an authorization-code flow with PKCE (S256), implemented in
+`src/lib/auth/oauth.ts` rather than pulled from a dependency, because the
+behaviour is small enough to review in one sitting.
 
-- `state` is generated per attempt, stored server-side in `oauth_states`, single
-  use, and expires after ten minutes. The `code_verifier` never leaves the
-  server.
+X runs on OAuth 1.0a (`src/lib/auth/oauth1.ts`). That is not a preference: X
+issues this app an OAuth 2.0 user access token and then answers `GET
+/2/users/me` with a bare `403 Forbidden`, while the same endpoint returns `200`
+for an OAuth 1.0a user token from the same app. `X_OAUTH_VERSION=2` selects the
+PKCE path for X again if that entitlement is restored. Both flows return the
+same numeric X user id, so identity does not change with the choice.
+
+- `state` is generated per attempt for PKCE; for X's 1.0a the request token is
+  the state. Either way it is stored server-side in `oauth_states`, single use,
+  and expires after ten minutes, and the matching secret (`code_verifier`, or
+  the request-token secret) never leaves the server.
 - Identity is keyed on the provider's **stable account id** (`sub` for Google,
   `data.id` for X), never on a handle or an email address, both of which can be
   reassigned.

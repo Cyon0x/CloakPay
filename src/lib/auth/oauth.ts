@@ -1,20 +1,27 @@
 import { createHash, randomBytes } from "node:crypto";
 import { db } from "../db";
 import { env } from "../env";
+import { beginXAuthorization, exchangeXVerifier, readXUser } from "./oauth1";
 
 /**
  * Google and X are the only ways to sign in.
  *
- * The flow is a standard authorization-code flow with PKCE. It is implemented
- * here rather than pulled from a dependency because the two providers differ in
- * a couple of places that matter (X authenticates the token exchange with HTTP
- * Basic, Google with a client secret in the body) and because the behaviour we
- * need is small enough to review in one sitting.
+ * Google signs in with an authorization-code flow with PKCE, implemented here
+ * rather than pulled from a dependency because the behaviour we need is small
+ * enough to review in one sitting.
+ *
+ * X does not answer that flow for this app any more. Its token exchange
+ * succeeds and then `GET /2/users/me` refuses the resulting user token with a
+ * `403`, while the same endpoint accepts an OAuth 1.0a user token from the same
+ * app, so X runs on 1.0a instead: see `src/lib/auth/oauth1.ts`. Setting
+ * `X_OAUTH_VERSION=2` puts it back on the flow below, which is kept because it
+ * is what should work if X fixes the entitlement.
  *
  * Guarantees:
  *   * `state` is generated per attempt, stored server-side, single-use, and
  *     expires after ten minutes.
- *   * `code_verifier` never leaves the server.
+ *   * the per-handshake secret (`code_verifier` for PKCE, the request-token
+ *     secret for X's 1.0a) never leaves the server.
  *   * Identity is keyed on the provider's stable account id, never on a handle
  *     or an email address, both of which can change or be reassigned.
  */
@@ -156,6 +163,8 @@ function sha256base64url(value: string): string {
 
 /** Creates and persists a single-use handshake record. */
 export async function beginAuthorization(provider: ProviderId, returnTo: string) {
+  if (provider === "x" && env.x.oauthVersion === "1") return beginXHandshake(returnTo);
+
   const definition = getProvider(provider);
   const state = base64url(randomBytes(32));
   const codeVerifier = base64url(randomBytes(32));
@@ -181,6 +190,26 @@ export async function beginAuthorization(provider: ProviderId, returnTo: string)
 }
 
 /**
+ * Starts X's OAuth 1.0a handshake and persists the half that must stay here.
+ *
+ * X's request token is unguessable and single use, so it takes the place of the
+ * `state` value the other flows generate, and its secret is stored in the same
+ * per-handshake column the PKCE verifier uses. `consumeState` therefore guards
+ * both flows with one mechanism.
+ */
+async function beginXHandshake(returnTo: string) {
+  const callback = redirectUri("x");
+  const { request, authorizeUrl } = await beginXAuthorization(callback);
+
+  await db()`
+    insert into oauth_states (state, provider, code_verifier, redirect_uri, return_to)
+    values (${request.token}, 'x', ${request.secret}, ${callback}, ${returnTo})
+  `;
+
+  return { url: authorizeUrl, state: request.token };
+}
+
+/**
  * Consumes a handshake by state. Returns null when the state is unknown,
  * expired, already used, or belongs to a different provider: all four cases are
  * rejected identically so a caller cannot probe which one it was.
@@ -198,12 +227,35 @@ export async function consumeState(state: string, provider: ProviderId) {
   return rows[0] ?? null;
 }
 
+/**
+ * Completes a handshake and returns the provider profile.
+ *
+ * `state` and `code` are what the provider sent back; `secret` and `redirectUri`
+ * come from the handshake row. For X on 1.0a the state is the request token, the
+ * code is the verifier, and the secret is the request-token secret.
+ */
 export async function exchangeCode(
   provider: ProviderId,
-  code: string,
-  codeVerifier: string,
-  redirect: string,
+  handshake: { state: string; code: string; secret: string; redirectUri: string },
 ): Promise<Profile> {
+  if (provider === "x" && env.x.oauthVersion === "1") {
+    const access = await exchangeXVerifier(
+      { token: handshake.state, secret: handshake.secret },
+      handshake.code,
+    );
+    const user = await readXUser(access);
+    // X only returns an email address with a separate, reviewed scope, so the
+    // profile deliberately carries none.
+    return {
+      accountId: user.id,
+      handle: user.handle,
+      email: null,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+    };
+  }
+
+  const { code, secret: codeVerifier, redirectUri: redirect } = handshake;
   const definition = getProvider(provider);
   const body = new URLSearchParams({
     grant_type: "authorization_code",

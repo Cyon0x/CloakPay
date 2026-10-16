@@ -14,6 +14,7 @@
  *   APP_URL=https://example.com node scripts/auth-check.mjs
  */
 import { existsSync, readFileSync } from "node:fs";
+import { createHmac, randomBytes } from "node:crypto";
 
 function loadEnv() {
   const values = { ...process.env };
@@ -137,6 +138,89 @@ function reportXAuthorizeLimitation() {
 }
 
 /**
+ * RFC 5849 §3.6 percent-encoding, then the HMAC-SHA1 signature.
+ *
+ * Written out again here rather than imported so this script stays a standalone
+ * second opinion: it is a separate implementation of the same rule, run against
+ * X, on purpose.
+ */
+function percentEncode(value) {
+  return encodeURIComponent(value).replace(/[!*'()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function signOAuth1(method, url, consumerKey, consumerSecret, extraParams) {
+  const target = new URL(url);
+  const parameters = { ...extraParams };
+  for (const [name, value] of target.searchParams) parameters[name] = value;
+  parameters.oauth_consumer_key = consumerKey;
+  parameters.oauth_nonce = randomBytes(16).toString("hex");
+  parameters.oauth_signature_method = "HMAC-SHA1";
+  parameters.oauth_timestamp = Math.floor(Date.now() / 1000).toString();
+  parameters.oauth_version = "1.0";
+
+  const normalised = Object.keys(parameters)
+    .sort()
+    .map((name) => `${percentEncode(name)}=${percentEncode(parameters[name])}`)
+    .join("&");
+  const base = [method, percentEncode(target.origin + target.pathname), percentEncode(normalised)].join("&");
+  const signature = createHmac("sha1", `${percentEncode(consumerSecret)}&`).update(base).digest("base64");
+  const header = Object.keys(parameters)
+    .filter((name) => name.startsWith("oauth_"))
+    .sort()
+    .map((name) => `${percentEncode(name)}="${percentEncode(parameters[name])}"`)
+    .join(", ");
+  return `OAuth ${header}, oauth_signature="${percentEncode(signature)}"`;
+}
+
+/**
+ * Checks X's OAuth 1.0a credentials, which is the handshake X actually answers.
+ *
+ * Asking for a request token is the one check that covers both halves: X
+ * authenticates the signature, which proves the consumer key and secret are
+ * right, and it confirms the callback URL is one it will send the user back to.
+ * Neither is verifiable without a call, and the second one is invisible from
+ * this side until a real sign-in fails. Nothing secret is printed.
+ */
+async function checkXOAuth1() {
+  const key = env.X_CONSUMER_KEY;
+  const secret = env.X_CONSUMER_SECRET;
+  if (!key && !secret) return record("x", false, "X: no consumer key and no consumer secret set.");
+  if (!key) return record("x", false, "X: X_CONSUMER_KEY is missing.");
+  if (!secret) return record("x", false, "X: X_CONSUMER_SECRET is missing.");
+
+  const url = "https://api.x.com/oauth/request_token";
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { authorization: signOAuth1("POST", url, key, secret, { oauth_callback: callbackUri("x") }) },
+    });
+  } catch (error) {
+    return record("x", false, `Could not reach ${url}: ${error.message}`);
+  }
+
+  const body = await response.text();
+  const pairs = new URLSearchParams(body);
+  if (response.ok && pairs.get("oauth_token") && pairs.get("oauth_callback_confirmed") === "true") {
+    return record(
+      "x",
+      true,
+      "X issued a request token: the consumer key, the consumer secret and the callback URL are all accepted.",
+    );
+  }
+
+  // X answers a refusal either as an `errors` XML document (an unapproved
+  // callback) or as JSON, and the sentence it chooses is the fix.
+  const code = (body.match(/<error code="([^"]+)"/) ?? [])[1];
+  const said =
+    (body.match(/<error[^>]*>([^<]+)<\/error>/) ?? [])[1] ??
+    (body.match(/"message"\s*:\s*"([^"]+)"/) ?? [])[1] ??
+    body.replace(/\s+/g, " ").trim().slice(0, 160);
+  const reason = [code, said].filter(Boolean).join(": ").slice(0, 200);
+  return record("x", false, `X refused the request token (${response.status}): ${reason || "no readable body"}`);
+}
+
+/**
  * Sends a deliberately invalid grant to the token endpoint.
  *
  * "invalid_grant" means the client authenticated and merely disliked the code,
@@ -247,7 +331,12 @@ async function reportUnfinishedHandshakes() {
 
 console.log(`Checking OAuth configuration for ${appUrl}`);
 console.log(`  Google callback: ${callbackUri("google")}`);
-console.log(`  X callback:      ${callbackUri("x")}\n`);
+console.log(`  X callback:      ${callbackUri("x")}`);
+
+// X answers 1.0a for this app and refuses the OAuth 2.0 user read, so the
+// script checks whichever handshake the deployment is told to use.
+const xOnOAuth1 = (env.X_OAUTH_VERSION ?? "1") !== "2";
+console.log(`  X handshake:     ${xOnOAuth1 ? "OAuth 1.0a, signed requests" : "OAuth 2.0 with PKCE"}\n`);
 
 const google = presence("google");
 if (google) {
@@ -256,7 +345,9 @@ if (google) {
 }
 
 const x = presence("x");
-if (x) {
+if (xOnOAuth1) {
+  await checkXOAuth1();
+} else if (x) {
   reportXAuthorizeLimitation();
   await checkSecret("x", x);
 }

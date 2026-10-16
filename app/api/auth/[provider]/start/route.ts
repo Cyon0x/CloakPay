@@ -36,10 +36,18 @@ export async function GET(
       : "/dashboard";
 
   await pruneExpiredStates();
-  const { url: authorizeUrl } = await beginAuthorization(
-    provider as "google" | "x",
-    returnTo,
-  );
+
+  let authorizeUrl: string;
+  try {
+    ({ url: authorizeUrl } = await beginAuthorization(provider as "google" | "x", returnTo));
+  } catch (error) {
+    // The provider refused before the user saw anything: a callback URL it will
+    // not accept, a revoked key, or a refusal of its own. The reason belongs in
+    // the log, and the user gets a page that says the attempt did not start
+    // rather than a 500.
+    console.error("[oauth] start failed", provider, (error as Error).message);
+    return NextResponse.redirect(new URL("/signin?error=provider_refused", env.appUrl));
+  }
 
   return NextResponse.redirect(authorizeUrl);
 }

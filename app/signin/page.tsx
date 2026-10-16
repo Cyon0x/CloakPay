@@ -11,6 +11,7 @@ const ERRORS: Record<string, string> = {
   state_mismatch: "That sign-in attempt expired or was tampered with. Try again.",
   invalid_callback: "The provider sent an incomplete response. Try again.",
   exchange_failed: "We could not complete the sign-in with the provider. Try again.",
+  provider_refused: "The provider refused to start that sign-in. Nothing was created — try again.",
   unknown_provider: "That sign-in method is not available.",
   rate_limited: "Too many attempts. Wait a minute and try again.",
   bad_origin: "That request did not come from CloakPay.",
@@ -92,10 +93,10 @@ export default async function SignInPage({
                 }
               >
                 {!available.google && !available.x
-                  ? "Neither provider has credentials configured on this deployment. Set GOOGLE_CLIENT_ID/SECRET and X_CLIENT_ID/SECRET."
+                  ? `Neither provider has credentials configured on this deployment. Set GOOGLE_CLIENT_ID/SECRET and ${available.xNeeds}.`
                   : !available.google
                     ? "Google is unavailable: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set."
-                    : "X is unavailable: X_CLIENT_ID and X_CLIENT_SECRET are not set."}{" "}
+                    : `X is unavailable: ${available.xNeeds} are not set.`}{" "}
                 The buttons are disabled rather than failing after a redirect.
               </Notice>
             </div>
