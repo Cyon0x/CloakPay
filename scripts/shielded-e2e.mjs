@@ -64,6 +64,7 @@ const { activeChain } = await import("../src/config/chain.ts");
 const { DENOMINATIONS, getPoolDeployment } = await import("../src/config/pool.ts");
 const crypto = await import("../src/protocol/crypto.ts");
 const shielded = await import("../src/lib/client/shielded.ts");
+const { fieldToHex } = await import("../src/protocol/field.ts");
 
 const deployment = getPoolDeployment(activeChain.chainId);
 if (!deployment) {
@@ -198,20 +199,40 @@ async function createIdentity(username) {
  */
 async function sweep(identity) {
   const account = mnemonicToAccount(identity.secret.mnemonic);
-  const balance = await publicClient.getBalance({ address: account.address });
-  const gasPrice = await publicClient.getGasPrice();
-  const reserve = gasPrice * 21_000n * 2n;
-  if (balance <= reserve) return null;
+  const to = privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY).address;
   const client = createWalletClient({
     account,
     transport: http(activeChain.rpcUrl, { timeout: 30_000 }),
   });
-  const hash = await client.sendTransaction({
-    to: privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY).address,
-    value: balance - reserve,
-  });
-  await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
-  return hash;
+
+  // This is the last transaction the key will ever sign, so it has to fit
+  // exactly -- there is no second chance once the process exits. Budgeting
+  // against `getGasPrice()` is not enough: viem sends an EIP-1559 fee cap,
+  // which on this chain is about twice the legacy price, and that is what left
+  // the first attempt a few thousand gas short of its own allowance. Budget
+  // against the cap instead, and pin the cap so the cost is deterministic.
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const balance = await publicClient.getBalance({ address: account.address });
+      const fees = await publicClient.estimateFeesPerGas();
+      const maxFeePerGas = fees.maxFeePerGas ?? (await publicClient.getGasPrice()) * 2n;
+      const reserve = maxFeePerGas * 21_000n * 3n;
+      if (balance <= reserve) return null;
+      const hash = await client.sendTransaction({
+        to,
+        value: balance - reserve,
+        gas: 21_000n,
+        maxFeePerGas,
+        ...(fees.maxPriorityFeePerGas === undefined ? {} : { maxPriorityFeePerGas: fees.maxPriorityFeePerGas }),
+      });
+      await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      return hash;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 /** Sends testnet HYPE from the deployment wallet so the test can pay gas. */
@@ -264,7 +285,10 @@ try {
   // than surfacing a raw "exceeds the balance of the account" from viem.
   const deployerAddress = privateKeyToAccount(env.DEPLOYER_PRIVATE_KEY).address;
   const deployerBalance = await publicClient.getBalance({ address: deployerAddress });
-  const required = FUND_PAYER + FUND_PAYEE + denomination.wei;
+  // The payer's float already has to cover the deposit, so counting the
+  // denomination again would overstate the requirement. What does leave the
+  // deployment wallet is the two floats, plus slack for the sweep transactions.
+  const required = FUND_PAYER + FUND_PAYEE + 500_000_000_000_000n; // + 0.0005
   record(
     "the deployment wallet can bankroll the run",
     deployerBalance >= required,
@@ -377,18 +401,28 @@ try {
     `spendable balance ${wei(shielded.balanceOf(payeeSpendable))}`,
   );
 
-  const [storedRow] = await sql`
-    select note_envelope, status, origin from shielded_notes
-    where user_id = ${payee.id} and commitment = ${`0x${payment.toCommitment.toString(16)}`}
-  `;
+  // The commitment is stored the way `fieldToHex` writes it -- zero-padded to
+  // 64 hex characters -- so looking it up with a bare `toString(16)` silently
+  // found no row and the assertion below passed against `{}`. Look the row up
+  // the same way the application stores it, and say so plainly when it is
+  // missing: a check that cannot find its subject is not a check.
+  const storedRow = (
+    await sql`
+      select note_envelope, status, origin from shielded_notes
+      where user_id = ${payee.id} and commitment = ${fieldToHex(payment.toCommitment)}
+    `
+  )[0];
   const serialised = JSON.stringify(storedRow ?? {});
   const envelopeKeys = Object.keys(storedRow?.note_envelope ?? {}).sort().join(",");
   record(
     "the stored row is ciphertext only: no note secret, nullifier or amount",
-    envelopeKeys === "alg,ct,epk,iv,v" &&
+    Boolean(storedRow) &&
+      envelopeKeys === "alg,ct,epk,iv,v" &&
       !serialised.includes(received?.note.secret.toString() ?? "\u0000") &&
       !serialised.includes(received?.note.nullifier.toString() ?? "\u0000"),
-    `envelope keys [${envelopeKeys}]`,
+    storedRow
+      ? `envelope keys [${envelopeKeys}]`
+      : `no shielded_notes row for commitment ${fieldToHex(payment.toCommitment)}`,
   );
 
   /* ── 6. withdraw ────────────────────────────────────────────────────────── */
@@ -457,9 +491,17 @@ try {
     if (!identity) continue;
     try {
       const hash = await sweep(identity);
-      if (hash) console.log(`\nReturned the unused balance of ${identity.address} to the deployer (${hash.slice(0, 12)}…).`);
+      record(
+        `the balance of ${identity.address} went back to the deployment wallet`,
+        true,
+        hash ? `swept in ${hash.slice(0, 12)}…` : "there was nothing left to return",
+      );
     } catch (sweepError) {
-      console.error(`could not return the balance of ${identity.address}:`, sweepError.message);
+      record(
+        `the balance of ${identity.address} went back to the deployment wallet`,
+        false,
+        `${sweepError.message} -- this balance is now unrecoverable`,
+      );
     }
   }
 

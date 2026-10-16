@@ -43,9 +43,12 @@ and, outside a browser, resolves them on disk.
 
 It also needs the deployment wallet to hold enough testnet HYPE to bankroll the
 two throwaway wallets it creates; it says so plainly and stops before spending
-anything if it does not. Whatever those wallets have left is returned to the
-deployment wallet on the way out, including after a failure, because their
-mnemonics are generated per run and are gone once the process exits. The faucet
+anything if it does not. Whatever those wallets have left goes back to the
+deployment wallet on the way out, including after a failure, and the return is
+itself an asserted check -- those mnemonics are generated per run and are gone
+once the process exits, so a sweep that fails is money burned. Only the gas
+reserve the sweep transaction needs stays behind, about 0.0000055 HYPE per
+wallet. The faucet
 has no API, so topping the wallet up is a manual visit to
 https://elysium.kinetiq.xyz/testnet-faucet.
 
