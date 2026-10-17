@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The development badge sits in the bottom-left corner, exactly where the
+  // phone tab bar's Home item is. It is a dev-tools overlay, not product UI, and
+  // it makes layout QA read as an overlap that does not exist in production.
+  devIndicators: false,
   serverExternalPackages: ["postgres"],
   /**
    * The receipt route draws the CloakPay lockup into the PDF, so that file has

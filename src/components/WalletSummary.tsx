@@ -32,6 +32,7 @@ export function WalletSummary({
   const [balance, setBalance] = useState<bigint | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [copied, setCopied] = useState<"idle" | "ok" | "failed">("idle");
+  const [hidden, setHidden] = useState(false);
   const lastRead = useRef(0);
 
   const read = useCallback(
@@ -87,17 +88,57 @@ export function WalletSummary({
   }
 
   return (
-    <section className="balance-panel" aria-labelledby="balance-heading">
-      <div className="balance-main">
-        <p className="balance-label" id="balance-heading">
-          Wallet balance
-        </p>
+    <div className="wallet-row">
+      <section className="wallet-card" aria-labelledby="balance-heading">
+        <div className="wallet-art" aria-hidden="true">
+          <svg viewBox="0 0 800 280" preserveAspectRatio="xMidYMid slice" fill="none">
+            <path
+              d="M-60 232C90 224 150 176 268 174c112-2 190 44 312 28 106-14 180-56 280-46"
+              stroke="currentColor"
+              opacity="0.55"
+            />
+            <path
+              d="M-20 262C118 238 190 205 292 204c118-1 208 32 322 18 92-11 160-40 226-34"
+              stroke="currentColor"
+              opacity="0.32"
+            />
+            <path
+              d="M40 152c104-38 168-58 268-40 104 19 176 58 286 44 74-10 130-33 186-27"
+              stroke="currentColor"
+              opacity="0.2"
+            />
+            <path
+              d="M120 106c84-22 144-40 238-20 90 19 156 47 244 38 62-7 108-22 158-17"
+              stroke="currentColor"
+              opacity="0.12"
+            />
+          </svg>
+        </div>
+
+        <div className="wallet-top">
+          <p className="wallet-label" id="balance-heading">
+            <Icon name="wallet" size={14} strokeWidth={1.7} />
+            Wallet balance
+          </p>
+          <button
+            type="button"
+            className="wallet-eye"
+            onClick={() => setHidden((value) => !value)}
+            aria-label={hidden ? "Show balance" : "Hide balance"}
+            aria-pressed={hidden}
+            title={hidden ? "Show balance" : "Hide balance"}
+          >
+            <Icon name={hidden ? "eyeOff" : "eye"} size={16} strokeWidth={1.7} />
+          </button>
+        </div>
 
         <p className="balance-amount mono">
           {state === "loading" ? (
             <span className="skeleton balance-skeleton" aria-hidden="true" />
           ) : state === "error" ? (
             <span className="balance-unavailable">—</span>
+          ) : hidden ? (
+            <span aria-label="Balance hidden">••••••</span>
           ) : (
             formatWei(balance ?? 0n, decimals, 6)
           )}
@@ -122,41 +163,38 @@ export function WalletSummary({
         </p>
 
         {username ? (
-          <div className="username-row">
+          <div className="wallet-foot">
             <span className="username-chip">
+              <Icon name="user" size={13} strokeWidth={1.8} />
               <span className="mono">@{username}</span>
             </span>
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="wallet-copy"
               onClick={copyUsername}
               aria-label={`Copy your username, ${username}`}
               title="Copy username"
             >
-              <Icon name={copied === "ok" ? "check" : "copy"} size={14} />
-              Copy
+              <Icon name={copied === "ok" ? "check" : "copy"} size={13} />
+              {copied === "ok" ? "Copied" : "Copy"}
             </button>
-            <span className="tiny muted" role="status" aria-live="polite">
-              {copied === "ok"
-                ? "Username copied."
-                : copied === "failed"
-                  ? "Your browser blocked the clipboard. Select the username to copy it."
-                  : ""}
+            <span className="tiny" role="status" aria-live="polite">
+              {copied === "failed" ? "Clipboard blocked — select the username to copy it." : ""}
             </span>
           </div>
         ) : null}
-      </div>
+      </section>
 
-      <div className="balance-actions">
-        <Link href="/send" className="btn btn-primary">
-          <Icon name="send" size={16} />
+      <div className="wallet-actions">
+        <Link href="/send" className="wallet-action wallet-action-primary">
+          <Icon name="send" size={16} strokeWidth={1.8} />
           Send
         </Link>
-        <Link href="/receive" className="btn btn-secondary">
-          <Icon name="receive" size={16} />
+        <Link href="/receive" className="wallet-action wallet-action-secondary">
+          <Icon name="receive" size={16} strokeWidth={1.8} />
           Receive
         </Link>
       </div>
-    </section>
+    </div>
   );
 }

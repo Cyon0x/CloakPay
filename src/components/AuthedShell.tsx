@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { MobileNav, TopBar } from "./Nav";
+import { AppSidebar, MobileNav, TopBar } from "./Nav";
 import { currentUser, type SessionUser } from "@/lib/session";
 import type { ReactNode } from "react";
 
@@ -22,12 +22,15 @@ export async function AuthedShell({
   }
 
   return (
-    <div className="app-shell">
-      <TopBar user={user} />
-      <main id="main" className="app-body">
-        <div className="shell page">{typeof children === "function" ? children(user) : children}</div>
-      </main>
-      <MobileNav />
+    <div className="app-shell app-shell-auth">
+      <AppSidebar user={user} />
+      <div className="app-main">
+        <TopBar user={user} withNav={false} />
+        <main id="main" className="app-body">
+          <div className="shell page">{typeof children === "function" ? children(user) : children}</div>
+        </main>
+        <MobileNav />
+      </div>
     </div>
   );
 }

@@ -64,7 +64,14 @@ function isCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
+export function TopBar({
+  user,
+  withNav = true,
+}: {
+  user: NavUser | SessionUser | null;
+  /** The authenticated shell has a sidebar; public pages do not. */
+  withNav?: boolean;
+}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
@@ -152,14 +159,18 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
     : [];
 
   return (
-    <header className="topbar">
+    <header className={`topbar${withNav ? "" : " topbar-with-sidebar"}`}>
       <div className="shell topbar-inner">
         {/* Signed in, the brand is the way back to the app home. Signed out, it
             is the way back to the landing page. Both are the same component so
-            the two headers cannot drift apart. */}
-        <BrandLink href={user ? "/dashboard" : "/"} markSize={26} />
+            the two headers cannot drift apart. On desktop the sidebar carries
+            the lockup and this copy is hidden by the stylesheet. */}
+        <div className="brand-block">
+          <BrandLink href={user ? "/dashboard" : "/"} markSize={25} />
+          <p className="brand-tagline">Private · Fast · Global</p>
+        </div>
 
-        {user ? (
+        {user && withNav ? (
           <nav className="topbar-nav" aria-label="Primary">
             {DESKTOP_ITEMS.map((item) => (
               <Link
@@ -172,7 +183,7 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
               </Link>
             ))}
           </nav>
-        ) : (
+        ) : !user ? (
           <nav className="topbar-nav" aria-label="Primary">
             {PUBLIC_ITEMS.map((item) => (
               <Link
@@ -185,22 +196,21 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
               </Link>
             ))}
           </nav>
-        )}
+        ) : null}
 
         <div className="topbar-actions">
           <ThemeToggle />
           {user ? (
             <>
-              {user.username ? (
-                <Link href={`/u/${user.username}`} className="btn btn-ghost btn-sm topbar-handle">
-                  @{user.username}
-                </Link>
-              ) : (
-                <Link href="/onboarding" className="btn btn-ghost btn-sm topbar-handle">
-                  Finish setup
-                </Link>
-              )}
-              <Link href="/settings" className="btn btn-secondary btn-sm">
+              <Link
+                href="/settings#notifications"
+                className="icon-btn topbar-bell"
+                aria-label="Notification settings"
+                title="Notification settings"
+              >
+                <Icon name="bell" size={17} strokeWidth={1.7} />
+              </Link>
+              <Link href="/settings" className="btn btn-secondary btn-sm topbar-set">
                 <Icon name="settings" size={15} />
                 <span className="topbar-action-label">Settings</span>
               </Link>
@@ -254,7 +264,7 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
               <p className="drawer-title">Menu</p>
               <button
                 type="button"
-                className="theme-toggle"
+                className="icon-btn"
                 aria-label="Close navigation menu"
                 title="Close navigation menu"
                 onClick={() => {
@@ -379,6 +389,50 @@ export function TopBar({ user }: { user: NavUser | SessionUser | null }) {
         document.body,
       ) : null}
     </header>
+  );
+}
+
+/**
+ * The desktop rail. It carries the same five destinations as the phone tab bar
+ * and the same routes, but with room for the full lockup and the account, as in
+ * the reference. It is display:none below the desktop breakpoint, where the
+ * compact header and tab bar take over; the drawer remains the complete list.
+ */
+export function AppSidebar({ user }: { user: NavUser | SessionUser | null }) {
+  const pathname = usePathname();
+  if (!user) return null;
+
+  const initial = (user.displayName ?? user.username ?? "C").trim().slice(0, 1).toUpperCase();
+
+  return (
+    <aside className="app-sidebar" aria-label="Primary">
+      <div className="sidebar-brand">
+        <BrandLink href="/dashboard" markSize={27} />
+        <p className="brand-tagline">Private · Fast · Global</p>
+      </div>
+
+      <nav className="sidebar-nav">
+        {DESKTOP_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="sidebar-link"
+            aria-current={isCurrent(pathname, item.href) ? "page" : undefined}
+          >
+            <Icon name={item.icon} size={18} strokeWidth={1.7} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="sidebar-foot">
+        <Link href="/settings" className="sidebar-account" aria-label="Account and settings">
+          <span className="avatar avatar-sm" aria-hidden="true">{initial}</span>
+          <span className="sidebar-account-name">@{user.username ?? "account"}</span>
+          <Icon name="settings" size={16} strokeWidth={1.7} />
+        </Link>
+      </div>
+    </aside>
   );
 }
 

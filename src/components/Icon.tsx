@@ -54,6 +54,9 @@ const PATHS: Record<string, string[]> = {
   refresh: ["M19 12a7 7 0 1 1-2.4-5.3", "M19.4 4.4v4.2h-4.2"],
   arrowRight: ["M5 12h13.4", "m13.4 6.6 5.4 5.4-5.4 5.4"],
   arrowLeft: ["M19 12H5.6", "m10.6 6.6L5.2 12l5.4 5.4"],
+  chevronRight: ["m9.5 6.5 5.5 5.5-5.5 5.5"],
+  eye: [circle(12, 12, 3.1), "M3.2 12S6.4 5.9 12 5.9 20.8 12 20.8 12 17.6 18.1 12 18.1 3.2 12 3.2 12"],
+  eyeOff: [circle(12, 12, 3.1), "M4.4 4.4 19.6 19.6", "M9.4 6.3A9.6 9.6 0 0 1 12 5.9c5.6 0 8.8 6.1 8.8 6.1a17 17 0 0 1-2.6 3.4", "M6 7.5A17 17 0 0 0 3.2 12S6.4 18.1 12 18.1c1 0 1.9-.2 2.7-.5"],
   /* Theme. Drawn to read at 16px on a busy header, so the disc is large and
      the rays are short and separated rather than thin and crowded. */
   sun: [

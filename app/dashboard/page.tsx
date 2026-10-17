@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { WalletSummary } from "@/components/WalletSummary";
+import { GetPaidCard } from "@/components/GetPaidCard";
 import { ComingSoon } from "@/components/ComingSoon";
-import { Badge, Card, EmptyState } from "@/components/ui";
+import { Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain } from "@/config/chain";
 import { EXTERNAL_TRANSFER_PAUSED } from "@/config/features";
+import { env } from "@/lib/env";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -17,10 +19,9 @@ export const dynamic = "force-dynamic";
  * Home is about the two things a person opens it for: what they hold, and who
  * they are paying. It leads with the username, because that is the thing a
  * CloakPay payment is addressed to, and with the balance that a payment is
- * actually spent from. The two features that are paused are listed at the
- * bottom as paused, so nothing here suggests they are available -- stated in
- * one line each, because a user needs to know a feature is not there yet, not
- * how it is built or what state its implementation is in.
+ * actually spent from. Every action below it opens a route that exists; the two
+ * paused features stay at the bottom, stated in one line each, so nothing here
+ * suggests they are available.
  */
 export default async function DashboardPage() {
   const user = await currentUserOrRedirect();
@@ -50,82 +51,89 @@ export default async function DashboardPage() {
     order by p.created_at desc limit 5
   `;
 
+  const symbol = activeChain.nativeToken.symbol;
+  const receiveLink = user.username ? `${env.appUrl}/u/${user.username}` : null;
+
   return (
     <AuthedShell>
-      <>
-        <div className="page-header page-header-tight">
-          <div>
-            <h1 className="page-title">Hello{user.displayName ? `, ${user.displayName}` : ""}</h1>
-            {/* The balance panel below already names the wallet and the network,
-                so repeating either here would just be noise. */}
-            {wallet ? null : (
-              <p className="page-subtitle">
-                No wallet yet — finish setting up your account to send and receive.
-              </p>
-            )}
-          </div>
-        </div>
+      <div className="dashboard">
+        <header className="dashboard-greeting">
+          <h1>Hello{user.displayName ? `, ${user.displayName}` : user.username ? `, @${user.username}` : ""}</h1>
+          <p>Your wallet, your control.</p>
+          {wallet ? null : (
+            <p className="tiny muted" style={{ marginTop: 6 }}>
+              No wallet yet — finish setting up your account to send and receive.
+            </p>
+          )}
+        </header>
 
         <WalletSummary
           address={wallet?.address ?? null}
           username={user.username}
-          symbol={activeChain.nativeToken.symbol}
+          symbol={symbol}
           decimals={activeChain.nativeToken.decimals}
         />
 
-        <section className="grid-3" style={{ marginTop: 22 }}>
-          <Card className="card-quiet">
-            <div style={{ padding: 20 }}>
-              <p className="table-head">Pay someone</p>
-              <p className="tiny muted" style={{ marginTop: 8 }}>
-                Send {activeChain.nativeToken.symbol} to another CloakPay user by typing their username —
-                their wallet address stays private.
-              </p>
-              <Link href="/send" className="btn btn-primary btn-sm" style={{ marginTop: 14 }}>
-                <Icon name="send" size={14} />
-                Send a payment
-              </Link>
+        <section className="dash-cards" aria-label="Payments and receipts">
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="send" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Pay Someone</h2>
             </div>
-          </Card>
-          <Card className="card-quiet">
-            <div style={{ padding: 20 }}>
-              <p className="table-head">Receipts</p>
-              <p className="tiny muted" style={{ marginTop: 8 }}>
-                Download a receipt for any confirmed payment.
-              </p>
-              <Link href="/transactions" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
-                <Icon name="list" size={14} />
-                All transactions
-              </Link>
+            <p>
+              Send {symbol} to another CloakPay user by typing their username — their wallet address stays
+              private.
+            </p>
+            <Link href="/send" className="dash-card-action">
+              Send a payment
+              <Icon name="chevronRight" size={15} />
+            </Link>
+          </article>
+
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="list" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Receipts</h2>
             </div>
-          </Card>
-          <Card className="card-quiet">
-            <div style={{ padding: 20 }}>
-              <p className="table-head">Get paid</p>
-              <p className="tiny muted" style={{ marginTop: 8 }}>
-                Share @{user.username} and other CloakPay users can pay you without ever seeing your wallet
-                address.
-              </p>
-              <Link href="/receive" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
-                <Icon name="receive" size={14} />
-                Receiving details
-              </Link>
+            <p>Download a receipt for any confirmed payment.</p>
+            <Link href="/transactions" className="dash-card-action">
+              All transactions
+              <Icon name="chevronRight" size={15} />
+            </Link>
+          </article>
+
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="link" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Get Paid</h2>
             </div>
-          </Card>
+            <p>
+              Share @{user.username ?? "your username"} and other CloakPay users can pay you without ever
+              seeing your wallet address.
+            </p>
+            <GetPaidCard username={user.username} link={receiveLink} />
+          </article>
         </section>
 
-        <section style={{ marginTop: 28 }}>
-          <div className="row-between" style={{ marginBottom: 12 }}>
-            <h2 style={{ fontSize: 17 }}>Recent activity</h2>
-            <div className="row" style={{ gap: 10 }}>
-              <Link href="/activity" className="link tiny">
+        <section style={{ marginTop: 24 }} aria-labelledby="recent-heading">
+          <div className="activity-head">
+            <h2 id="recent-heading">Recent activity</h2>
+            <div className="activity-head-actions">
+              <Link href="/activity" className="link">
                 View all
               </Link>
-              <Link href="/transactions" className="link tiny">
+              <Link href="/transactions" className="link">
                 All transactions
               </Link>
             </div>
           </div>
+
           {recent.length === 0 ? (
             <EmptyState
               title="No payments yet"
@@ -137,50 +145,60 @@ export default async function DashboardPage() {
               }
             />
           ) : (
-            <Card>
-              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                {recent.map((row) => (
-                  <li key={row.id} className="list-row divide-row">
-                    <div className="grow">
-                      <div className="row" style={{ gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 500 }}>
-                          {row.direction === "sent" ? "To" : "From"} @{row.counterparty}
-                        </span>
-                        <Badge kind={row.privacy} />
-                        <Badge kind={row.status} />
+            <div className="activity-card">
+              <ul className="activity-list">
+                {recent.map((row) => {
+                  const confirmed = row.status === "confirmed";
+                  const content = (
+                    <>
+                      <div className="activity-main">
+                        <div className="activity-who">
+                          <span>
+                            {row.direction === "sent" ? "To" : "From"} @{row.counterparty}
+                          </span>
+                          <Badge kind={row.privacy} />
+                          <Badge kind={row.status} />
+                        </div>
                       </div>
-                    </div>
-                    <span className="mono" style={{ fontSize: 14 }}>
-                      {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"}{" "}
-                      {activeChain.nativeToken.symbol}
-                    </span>
-                    {row.status === "confirmed" ? (
-                      <Link href={`/transactions/${row.id}`} className="btn btn-ghost btn-sm">
-                        Receipt
-                      </Link>
-                    ) : null}
-                  </li>
-                ))}
+                      <div className="activity-side">
+                        <span className="activity-amount">
+                          <span className="sign">{row.direction === "sent" ? "−" : "+"}</span>
+                          {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"} {symbol}
+                        </span>
+                        {confirmed ? (
+                          <span className="activity-receipt">
+                            <span>Receipt</span>
+                            <Icon name="chevronRight" size={14} />
+                          </span>
+                        ) : null}
+                      </div>
+                    </>
+                  );
+
+                  return (
+                    <li key={row.id}>
+                      {confirmed ? (
+                        <Link href={`/transactions/${row.id}`} className="activity-row">
+                          {content}
+                        </Link>
+                      ) : (
+                        <div className="activity-row">{content}</div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
-            </Card>
+            </div>
           )}
         </section>
 
-        <section style={{ marginTop: 28 }}>
+        <section className="paused-stack" aria-label="Not available yet">
           <div className="stack">
-            <ComingSoon
-              title="Swap"
-              icon="swap"
-              body="Exchange between assets inside CloakPay."
-            />
-            <ComingSoon
-              title="External Transfer"
-              icon="external"
-              body={EXTERNAL_TRANSFER_PAUSED}
-            />
+            <ComingSoon title="Swap" icon="swap" body="Exchange between assets inside CloakPay." />
+            <ComingSoon title="External Transfer" icon="external" body={EXTERNAL_TRANSFER_PAUSED} />
           </div>
         </section>
-      </>
+      </div>
     </AuthedShell>
   );
 }

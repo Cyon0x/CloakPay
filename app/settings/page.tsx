@@ -94,7 +94,7 @@ export default async function SettingsPage() {
               </div>
             </Card>
             <Card>
-              <div style={{ padding: 20 }}>
+              <div id="notifications" className="anchor-target" style={{ padding: 20 }}>
                 <p className="table-head">Notifications</p>
                 <p className="tiny muted" style={{ marginTop: 10 }}>
                   In-app notifications are on. Amounts are never included, so a lock-screen preview cannot
