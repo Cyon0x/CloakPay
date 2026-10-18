@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrandLink } from "./Brand";
 import { Icon } from "./Icon";
+import { activeChain } from "@/config/chain";
 import { NotificationsBell } from "./NotificationsBell";
 import { ThemeToggle } from "./ThemeToggle";
 import { useInstallApp } from "@/lib/client/install";
-import { useNotifications } from "@/lib/client/useNotifications";
 import type { SessionUser } from "@/lib/session";
 
 export interface NavUser {
@@ -48,7 +48,6 @@ const MOBILE_ITEMS = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/activity", label: "Activity", icon: "activity" },
   { href: "/send", label: "Send", icon: "send", primary: true },
-  { href: "/notifications", label: "Alerts", icon: "bell" },
   { href: "/links", label: "Links", icon: "link" },
   { href: "/settings", label: "You", icon: "user" },
 ];
@@ -200,6 +199,13 @@ export function TopBar({
               </Link>
             ))}
           </nav>
+        ) : null}
+
+        {user && !withNav ? (
+          <p className="topbar-context">
+            <span className="topbar-context-dot" aria-hidden="true" />
+            {activeChain.name}
+          </p>
         ) : null}
 
         <div className="topbar-actions">
@@ -435,7 +441,6 @@ export function AppSidebar({ user }: { user: NavUser | SessionUser | null }) {
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { unread } = useNotifications({ pollMs: 60_000 });
   return (
     <nav className="mobile-nav" aria-label="Primary, mobile">
       {MOBILE_ITEMS.map((item) =>
@@ -460,11 +465,6 @@ export function MobileNav() {
           >
             <span className="mobile-nav-icon">
               <Icon name={item.icon} />
-              {item.href === "/notifications" && unread > 0 ? (
-                <span className="mobile-nav-badge" aria-label={`${unread} unread`}>
-                  {unread > 9 ? "9+" : unread}
-                </span>
-              ) : null}
             </span>
             <span>{item.label}</span>
           </Link>

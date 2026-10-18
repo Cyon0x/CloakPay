@@ -23,7 +23,7 @@ export function NotificationsCenter() {
         <div>
           <h1 className="page-title">Notifications</h1>
           <p className="page-subtitle">
-            Payments, confirmations and account updates. Previews never include an amount.
+            Stay updated on your transactions, payments and account activity.
           </p>
         </div>
         <div className="page-actions">

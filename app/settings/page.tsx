@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
-import { Badge, Card, Notice, PageHeader } from "@/components/ui";
+import { Card, Notice, PageHeader } from "@/components/ui";
 import { listIdentities } from "@/lib/auth/accounts";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
@@ -19,12 +19,12 @@ export default async function SettingsPage() {
     <AuthedShell>
       <>
         <PageHeader title="Settings" subtitle="Identity, wallet, and privacy." />
-        <div className="split">
+        <div className="settings-grid">
           <div className="stack">
-            <Card>
-              <div style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div className="card-pad">
                 <p className="table-head">Profile</p>
-                <dl className="kv" style={{ marginTop: 12 }}>
+                <dl className="kv settings-kv">
                   <dt>Username</dt>
                   <dd className="mono">@{user.username}</dd>
                   <dt>Display name</dt>
@@ -35,28 +35,30 @@ export default async function SettingsPage() {
               </div>
             </Card>
 
-            <Card>
-              <div style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div className="card-pad">
                 <p className="table-head">Connected accounts</p>
-                <ul style={{ listStyle: "none", margin: "12px 0 0", padding: 0 }} className="stack-sm">
+                <ul className="settings-list">
                   {identities.map((identity) => (
                     <li key={identity.provider} className="row-between">
-                      <span style={{ fontSize: 14, textTransform: "capitalize" }}>{identity.provider}</span>
+                      <span className="settings-list-name">
+                        <span className="settings-provider">{identity.provider === "x" ? "X" : "Google"}</span>
+                      </span>
                       <span className="tiny muted">{identity.handle ? `@${identity.handle}` : "linked"}</span>
                     </li>
                   ))}
                 </ul>
-                <p className="tiny muted" style={{ marginTop: 12 }}>
+                <p className="tiny muted settings-copy">
                   Your sign-in identity is separate from your wallet. CloakPay does not keep provider access
                   tokens.
                 </p>
               </div>
             </Card>
 
-            <Card>
-              <div style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div className="card-pad">
                 <p className="table-head">Security and recovery</p>
-                <div className="stack-sm" style={{ marginTop: 12 }}>
+                <div className="stack-sm settings-stack">
                   <div className="row-between">
                     <span style={{ fontSize: 14 }}>Wallet</span>
                     <span className="tiny muted">
@@ -80,38 +82,38 @@ export default async function SettingsPage() {
           </div>
 
           <div className="stack">
-            <Card>
-              <div style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div className="card-pad">
                 <p className="table-head">Privacy preferences</p>
-                <p className="tiny muted" style={{ marginTop: 10 }}>
+                <p className="tiny muted settings-copy">
                   Your public page shows a username and a payment link. It never shows a wallet address,
                   email, or account id. Visibility controls are stored per account and default to the most
                   private setting.
                 </p>
-                <p className="tiny muted" style={{ marginTop: 10 }}>
+                <p className="tiny muted settings-copy">
                   Payments are ordinary transfers on a public testnet, so they can be seen on chain.
                 </p>
               </div>
             </Card>
-            <Card>
-              <div id="notifications" className="anchor-target" style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div id="notifications" className="anchor-target card-pad">
                 <p className="table-head">Notifications</p>
-                <p className="tiny muted" style={{ marginTop: 10 }}>
+                <p className="tiny muted settings-copy">
                   Payment and confirmation notices live in your inbox, with an unread count in the header
-                  bell and the Alerts tab. Amounts are never included in the preview.
+                  bell. Amounts are never included in the preview.
                 </p>
-                <Link href="/notifications" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
+                <Link href="/notifications" className="btn btn-secondary btn-sm settings-action">
                   Open notifications
                 </Link>
               </div>
             </Card>
-            <Card>
-              <div style={{ padding: 20 }}>
+            <Card className="settings-card">
+              <div className="card-pad">
                 <p className="table-head">Session</p>
-                <form action="/api/auth/signout" method="post" style={{ marginTop: 12 }}>
+                <form action="/api/auth/signout" method="post" className="settings-signout">
                   <button className="btn btn-danger btn-sm" type="submit">Sign out</button>
                 </form>
-                <p className="tiny muted" style={{ marginTop: 10 }}>
+                <p className="tiny muted settings-copy">
                   Signing out ends your session.
                 </p>
               </div>

@@ -16,22 +16,22 @@ import { activeChain } from "@/config/chain";
  */
 const ADVANTAGES = [
   {
-    icon: "wallet",
+    icon: "user",
     number: "01",
-    title: "An address leaves a trail",
-    body: "A wallet address can be watched, linked to a history and followed across a public ledger. Sharing one shares more than a destination.",
+    title: "Your username is enough.",
+    body: "Send money to another CloakPay user by username. No wallet addresses to copy, share, or expose in the interface.",
   },
   {
     icon: "shield",
     number: "02",
-    title: "Copying one is a risk",
-    body: "Long strings are slow to check and easy to mistype. One wrong character can send funds somewhere they can never be recovered.",
+    title: "Your payments, kept personal.",
+    body: "CloakPay keeps payment details out of its user-facing interface, so you can transact without disclosing wallet addresses or transaction hashes on screen.",
   },
   {
-    icon: "user",
+    icon: "lock",
     number: "03",
-    title: "Your username is the payment",
-    body: "Pay @someone. Their wallet address stays out of the conversation, and every confirmed payment leaves a receipt you can keep.",
+    title: "Privacy beyond the payment.",
+    body: "Keep the record you need without unnecessary technical details.",
   },
 ];
 
@@ -137,23 +137,28 @@ export default async function LandingPage() {
             </div>
 
             <div className="lp-hero-copy">
-              <p className="lp-kicker">
-                <span className="lp-kicker-line" aria-hidden="true" />
-                Payments, without the address
-              </p>
-              <h1 id="hero-heading">Pay someone by username, not by wallet address.</h1>
+              <h1 id="hero-heading">Your money moves. Your identity stays yours.</h1>
               <p className="lp-lede">
                 CloakPay is a privacy-focused way to pay on {activeChain.name}. Sign in with Google or X,
-                claim a username, and send money by typing it — no address to copy, share or check, and no
-                wallet address exposed in the conversation.
+                claim a username, and send money by typing it — no address to copy, share or check.
               </p>
               <div className="lp-actions">
-                <Link href="/signin" className="btn btn-primary btn-lg lp-btn-primary">
-                  Sign in
-                  <Icon name="arrowRight" size={17} strokeWidth={1.9} />
+                <Link href="/api/auth/google/start" className="btn btn-primary btn-lg lp-btn-primary">
+                  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.1h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.2-2 3.7-5 3.7-8.6z" />
+                    <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.8-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5l-3.9 3C3.2 21.3 7.3 24 12 24z" />
+                    <path fill="#FBBC05" d="M5.2 14.4A7.4 7.4 0 0 1 4.8 12c0-.8.2-1.7.4-2.4l-3.9-3A12 12 0 0 0 0 12c0 1.9.5 3.8 1.3 5.4l3.9-3z" />
+                    <path fill="#EA4335" d="M12 4.8c2.3 0 3.8 1 4.7 1.8l3.4-3.3C18.1 1.3 15.2 0 12 0 7.3 0 3.2 2.7 1.3 6.6l3.9 3C6.1 6.9 8.8 4.8 12 4.8z" />
+                  </svg>
+                  Sign in with Google
                 </Link>
-                <Link href="/signin" className="btn btn-secondary btn-lg lp-btn-secondary">
+                <Link href="/api/auth/x/start" className="btn btn-secondary btn-lg lp-btn-secondary lp-x-signin">
+                  <Icon name="external" size={16} strokeWidth={1.8} />
+                  Sign in with X
+                </Link>
+                <Link href="/signin" className="btn btn-secondary btn-lg lp-btn-secondary lp-create-account">
                   Create account
+                  <Icon name="arrowRight" size={17} strokeWidth={1.9} />
                 </Link>
                 <Link href="/how-it-works" className="lp-text-action">
                   How it works
@@ -174,12 +179,12 @@ export default async function LandingPage() {
           <div className="shell">
             <div className="lp-section-head">
               <div>
-                <p className="eyebrow">The advantage</p>
-                <h2 id="advantage-heading">Privacy begins before the payment is sent.</h2>
+                <p className="eyebrow">The problem</p>
+                <h2 id="advantage-heading">Your payment shouldn&apos;t be everyone&apos;s business.</h2>
               </div>
               <p>
-                CloakPay removes the wallet address from the part of a payment people actually share: the
-                name of the person being paid.
+                CloakPay keeps the part people share — a username — separate from the technical details
+                that do not need to enter the conversation.
               </p>
             </div>
 

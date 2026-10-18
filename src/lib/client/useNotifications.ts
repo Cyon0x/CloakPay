@@ -32,10 +32,27 @@ export function notificationHref(payload: unknown): string {
 }
 
 export function notificationIconName(kind: string): string {
-  if (kind === "payment.confirmed" || kind === "payment.received.confirmed") return "check";
+  if (kind === "payment.sent.confirmed") return "send";
+  if (kind === "payment.confirmed") return "check";
+  if (kind === "payment.received.confirmed") return "receive";
+  if (kind === "payment.received.private") return "shield";
+  if (kind.startsWith("payment.received")) return "download";
   if (kind.endsWith("private")) return "shield";
   if (kind === "payment.failed") return "alert";
-  return "receive";
+  if (kind.startsWith("link.")) return "link";
+  return "bell";
+}
+
+/** The short tag shown at the end of a row, matching the inbox reference. */
+export function notificationBadge(kind: string, read: boolean): { label: string; tone: string } {
+  if (kind === "payment.failed") return { label: "Failed", tone: "failed" };
+  if (kind === "payment.confirmed" || kind === "payment.received.confirmed") {
+    return { label: read ? "Completed" : "New", tone: read ? "complete" : "new" };
+  }
+  if (kind.includes("private")) return { label: "Private", tone: "private" };
+  if (kind === "payment.received") return { label: read ? "Completed" : "New", tone: read ? "complete" : "new" };
+  if (kind.startsWith("link.")) return { label: "Info", tone: "info" };
+  return { label: read ? "Info" : "New", tone: read ? "info" : "new" };
 }
 
 export function relativeTime(value: string): string {

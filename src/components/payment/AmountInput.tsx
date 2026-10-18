@@ -59,6 +59,7 @@ export function AmountInput({
           id={id}
           ref={field}
           className="amount-input mono"
+          size={10}
           value={value}
           onChange={(event) => onChange(event.target.value.replace(/[^0-9.]/g, ""))}
           onFocus={() => setFocused(true)}

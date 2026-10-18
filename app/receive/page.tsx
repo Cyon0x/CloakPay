@@ -3,6 +3,7 @@ import { AuthedShell } from "@/components/AuthedShell";
 import { QrCode } from "@/components/QrCode";
 import { CopyField } from "@/components/CopyField";
 import { CopyButton } from "@/components/CopyButton";
+import { Icon } from "@/components/Icon";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { db } from "@/lib/db";
 import { currentUserOrRedirect } from "@/lib/session";
@@ -43,9 +44,9 @@ export default async function ReceivePage() {
           subtitle="Share your username to get paid by other CloakPay users."
         />
 
-        <div className="split">
-          <Card>
-            <div style={{ padding: 24 }}>
+        <div className="receive-grid">
+          <Card className="receive-card receive-primary">
+            <div className="receive-card-inner">
               <p className="table-head">Your CloakPay username</p>
               <div className="receive-identity">
                 <span className="receive-username mono" title={`@${username}`}>
@@ -53,32 +54,33 @@ export default async function ReceivePage() {
                 </span>
                 <CopyButton value={username} label="the username" />
               </div>
-              <p className="tiny muted" style={{ marginTop: 10 }}>
+              <p className="tiny muted receive-hint">
                 You are paid at this username. It is the only thing another CloakPay user needs to send you
                 money.
               </p>
 
-              <div style={{ marginTop: 22, paddingTop: 20, borderTop: "1px solid var(--color-line-soft)" }}>
+              <div className="receive-divider">
                 <CopyField label="Your payment link" value={identity} />
-                <div style={{ marginTop: 20, textAlign: "center" }}>
+                <div className="receive-qr">
                   <QrCode value={identity} />
-                  <p className="tiny muted" style={{ marginTop: 10 }}>
+                  <p className="tiny muted receive-qr-caption">
                     Scanning opens your page, pre-filled with you as the recipient.
                   </p>
                 </div>
               </div>
 
-              <div className="row" style={{ gap: 8, marginTop: 20, justifyContent: "center" }}>
-                <Link href="/links" className="btn btn-primary">
+              <div className="receive-cta-row">
+                <Link href="/links/new" className="btn btn-primary btn-lg receive-cta">
+                  <Icon name="plus" size={16} strokeWidth={1.9} />
                   Create a payment link
                 </Link>
               </div>
             </div>
           </Card>
 
-          <div className="stack">
-            <Card>
-              <div style={{ padding: 20 }}>
+          <div className="stack receive-side">
+            <Card className="receive-address-card">
+              <div className="receive-side-inner">
                 <p className="table-head">Receive from external wallet</p>
                 {wallet ? (
                   <>
@@ -86,12 +88,12 @@ export default async function ReceivePage() {
                       <span className="mono receive-address-value">{wallet.address}</span>
                       <CopyButton value={wallet.address} label="the address" />
                     </div>
-                    <p className="tiny muted" style={{ marginTop: 10 }}>
+                    <p className="tiny muted receive-hint">
                       Use this address to receive {activeChain.nativeToken.symbol} from outside CloakPay.
                     </p>
                   </>
                 ) : (
-                  <p className="tiny muted" style={{ marginTop: 10 }}>
+                  <p className="tiny muted receive-hint">
                     No wallet on this account yet. Finish setting up your account and the address appears here.
                   </p>
                 )}
@@ -102,6 +104,14 @@ export default async function ReceivePage() {
               Payments arrive as soon as the network confirms them. Funds sent from outside CloakPay land at
               the address above.
             </Notice>
+
+            <div className="receive-assurance">
+              <span className="receive-assurance-icon"><Icon name="shield" size={18} strokeWidth={1.6} /></span>
+              <div>
+                <p>Names stay in front. Addresses stay behind.</p>
+                <span>Your public page never prints a wallet address, account id, or email.</span>
+              </div>
+            </div>
           </div>
         </div>
       </>

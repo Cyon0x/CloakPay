@@ -30,6 +30,15 @@ export function RecipientPicker({
   const [searching, setSearching] = useState(false);
   const [touched, setTouched] = useState(false);
   const requestId = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focusing on mount is handy with a keyboard, but on a phone it opens the
+  // keyboard and zooms the layout before the page has been read.
+  useEffect(() => {
+    if (autoFocus && window.matchMedia("(min-width: 760px)").matches) {
+      inputRef.current?.focus();
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     if (value) return;
@@ -103,7 +112,7 @@ export function RecipientPicker({
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}
-            autoFocus={autoFocus}
+            ref={inputRef}
             aria-describedby="recipient-hint"
           />
         </span>

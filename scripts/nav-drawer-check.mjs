@@ -31,6 +31,7 @@ const EXPECTED = [
   "Send",
   "Receive",
   "Activities",
+  "Notifications",
   "All transactions",
   "Payment links",
   "Faucet",
