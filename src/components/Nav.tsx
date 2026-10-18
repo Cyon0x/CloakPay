@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrandLink } from "./Brand";
 import { Icon } from "./Icon";
+import { NotificationsBell } from "./NotificationsBell";
 import { ThemeToggle } from "./ThemeToggle";
 import { useInstallApp } from "@/lib/client/install";
 import type { SessionUser } from "@/lib/session";
@@ -159,7 +160,7 @@ export function TopBar({
     : [];
 
   return (
-    <header className={`topbar${withNav ? "" : " topbar-with-sidebar"}`}>
+    <header className={`topbar${withNav ? "" : " topbar-with-sidebar"}${!user ? " topbar-public" : ""}`}>
       <div className="shell topbar-inner">
         {/* Signed in, the brand is the way back to the app home. Signed out, it
             is the way back to the landing page. Both are the same component so
@@ -202,14 +203,7 @@ export function TopBar({
           <ThemeToggle />
           {user ? (
             <>
-              <Link
-                href="/settings#notifications"
-                className="icon-btn topbar-bell"
-                aria-label="Notification settings"
-                title="Notification settings"
-              >
-                <Icon name="bell" size={17} strokeWidth={1.7} />
-              </Link>
+              <NotificationsBell />
               <Link href="/settings" className="btn btn-secondary btn-sm topbar-set">
                 <Icon name="settings" size={15} />
                 <span className="topbar-action-label">Settings</span>
@@ -217,10 +211,10 @@ export function TopBar({
             </>
           ) : (
             <>
-              <Link href="/signin" className="btn btn-secondary btn-sm topbar-signin">
+              <Link href="/signin" className="btn btn-secondary topbar-signin">
                 Sign in
               </Link>
-              <Link href="/signin" className="btn btn-primary btn-sm topbar-getstarted">
+              <Link href="/signin" className="btn btn-primary topbar-getstarted">
                 Get started
               </Link>
             </>

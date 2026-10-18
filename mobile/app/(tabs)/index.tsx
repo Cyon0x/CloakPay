@@ -5,12 +5,13 @@ import { Link } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/auth";
-import { Badge, Button, Card, EmptyState, Loading, StatRow } from "../../src/components/ui";
+import { Badge, Button, Card, EmptyState, Loading } from "../../src/components/ui";
 import { Lockup } from "../../src/components/Logo";
+import { Icon } from "../../src/components/Icon";
 import { activeChain } from "../../src/chain";
 import { readBalance } from "../../src/transfer";
 import { formatWei } from "../../src/format";
-import { color, space, type } from "../../src/theme";
+import { color, radius, space, type } from "../../src/theme";
 
 interface Payment {
   id: string;
@@ -81,6 +82,10 @@ export default function Dashboard() {
       >
         <View style={styles.header}>
           <Lockup markSize={26} />
+          <View style={styles.networkPill}>
+            <View style={styles.networkDot} />
+            <Text style={styles.networkText}>Elysium Testnet</Text>
+          </View>
         </View>
 
         <Text style={styles.handle}>@{user?.username}</Text>
@@ -88,6 +93,36 @@ export default function Dashboard() {
         <Text style={styles.sub}>
           {wallet ? `Payments on ${activeChain.name}, addressed to your username.` : "No wallet on this account yet."}
         </Text>
+
+        {error ? (
+          <Card style={styles.cardSpacing}>
+            <Text style={styles.errorText}>{error}</Text>
+          </Card>
+        ) : null}
+
+        <View style={styles.walletCard}>
+          <View style={styles.walletOrb} pointerEvents="none" />
+          <View style={styles.walletTop}>
+            <Text style={styles.walletLabel}>Wallet balance</Text>
+            <View style={styles.walletShield}>
+              <Icon name="shield" size={15} color="rgba(255,255,255,0.72)" strokeWidth={1.6} />
+            </View>
+          </View>
+          <Text style={styles.walletAmount} accessibilityLabel={balance === null ? "Balance unavailable" : `${formatWei(balance, 18, 6)} HYPE`}>
+            {balance === null ? "—" : formatWei(balance, 18, 6)}
+            <Text style={styles.walletUnit}>  {activeChain.nativeToken.symbol}</Text>
+          </Text>
+          <Text style={styles.walletMeta}>
+            {wallet?.address ? `${activeChain.name} · read from the network` : "No wallet on this account yet"}
+          </Text>
+          <View style={styles.walletFoot}>
+            <View style={styles.walletUser}>
+              <Icon name="user" size={13} color="rgba(255,255,255,0.72)" strokeWidth={1.7} />
+              <Text style={styles.walletUsername}>@{user?.username}</Text>
+            </View>
+            <Text style={styles.walletLive}>Live balance</Text>
+          </View>
+        </View>
 
         <View style={styles.actions}>
           <Link href="/(tabs)/send" asChild>
@@ -101,27 +136,12 @@ export default function Dashboard() {
           </Link>
         </View>
 
-        {error ? (
-          <Card style={styles.cardSpacing}>
-            <Text style={styles.errorText}>{error}</Text>
-          </Card>
-        ) : null}
-
-        <Card style={styles.cardSpacing}>
-          <StatRow
-            label="Balance"
-            value={balance === null ? "—" : `${formatWei(balance, 18, 4)} HYPE`}
-            hint="Read from the Elysium RPC just now"
-          />
-          <View style={styles.divider} />
-          <StatRow
-            label="Swap"
-            value="Coming soon"
-            hint="Exchange between assets inside CloakPay."
-          />
-        </Card>
-
-        <Text style={styles.sectionTitle}>Recent activity</Text>
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Recent activity</Text>
+          <Link href="/(tabs)/activity">
+            <Text style={styles.viewAll}>View all</Text>
+          </Link>
+        </View>
         {payments.length === 0 ? (
           <EmptyState
             title="No payments yet"
@@ -148,6 +168,16 @@ export default function Dashboard() {
             ))}
           </Card>
         )}
+
+        <View style={styles.comingSoon}>
+          <View style={styles.comingSoonIcon}>
+            <Icon name="activity" size={16} color={color.slate500} />
+          </View>
+          <View style={styles.comingSoonCopy}>
+            <Text style={styles.comingSoonTitle}>Swap</Text>
+            <Text style={styles.comingSoonText}>Exchange between assets inside CloakPay. Coming soon.</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -156,19 +186,41 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.paper50 },
   body: { padding: space.xl, paddingBottom: space.xxl + 24 },
-  header: { marginBottom: space.xl },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, marginBottom: space.xl },
+  networkPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: color.glassBorder, borderRadius: radius.pill, backgroundColor: color.glassSoft },
+  networkDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.ok600 },
+  networkText: { ...type.tiny, color: color.slate600, fontWeight: "500" },
   handle: { ...type.tiny, color: color.slate500 },
   heading: { ...type.title, color: color.ink950, marginTop: 2 },
   sub: { ...type.tiny, color: color.slate600, marginTop: 6 },
-  actions: { flexDirection: "row", gap: space.md, marginTop: space.xl },
+  walletCard: { position: "relative", overflow: "hidden", marginTop: space.xl, padding: space.xl, borderRadius: radius.xl + 2, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: color.ink900, shadowColor: "#14171b", shadowOpacity: 0.24, shadowRadius: 22, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  walletOrb: { position: "absolute", right: -70, top: -92, width: 220, height: 220, borderRadius: 110, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  walletTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md },
+  walletLabel: { ...type.label, color: "rgba(255,255,255,0.56)" },
+  walletShield: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)" },
+  walletAmount: { marginTop: space.lg, color: color.paper0, fontSize: 35, lineHeight: 41, letterSpacing: -1.1, fontWeight: "500", fontVariant: ["tabular-nums"] },
+  walletUnit: { fontSize: 11, letterSpacing: 1.4, color: "rgba(255,255,255,0.5)", fontWeight: "600" },
+  walletMeta: { ...type.tiny, color: "rgba(255,255,255,0.54)", marginTop: 6 },
+  walletFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, marginTop: space.xl, paddingTop: space.md, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.09)" },
+  walletUser: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.05)" },
+  walletUsername: { ...type.tiny, color: "rgba(255,255,255,0.88)", fontWeight: "500" },
+  walletLive: { ...type.tiny, color: "rgba(255,255,255,0.46)" },
+  actions: { flexDirection: "row", gap: space.sm, marginTop: space.md },
   actionButton: { flex: 1 },
   cardSpacing: { marginTop: space.lg },
-  divider: { height: 1, backgroundColor: color.lineSoft, marginVertical: space.md },
-  sectionTitle: { ...type.heading, color: color.ink950, marginTop: space.xxl, marginBottom: space.md },
+  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, marginTop: space.xxl, marginBottom: space.md },
+  sectionTitle: { ...type.heading, color: color.ink950 },
+  viewAll: { ...type.tiny, color: color.slate600, fontWeight: "500" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: space.md, gap: space.md },
+  divider: { borderTopWidth: 1, borderTopColor: color.glassBorder },
   rowMain: { flex: 1, gap: 5 },
   rowTitle: { fontSize: 14, color: color.ink900, fontWeight: "500" },
   badges: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   rowAmount: { ...type.body, color: color.ink900, fontVariant: ["tabular-nums"] },
   errorText: { ...type.small, color: color.err600 },
+  comingSoon: { flexDirection: "row", alignItems: "center", gap: space.md, marginTop: space.xl, padding: space.lg, borderWidth: 1, borderColor: color.glassBorder, borderRadius: radius.lg, backgroundColor: color.glassSoft },
+  comingSoonIcon: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: color.glassBorder, borderRadius: 11, backgroundColor: color.glassStrong },
+  comingSoonCopy: { flex: 1, gap: 2 },
+  comingSoonTitle: { fontSize: 14, fontWeight: "600", color: color.ink900 },
+  comingSoonText: { ...type.tiny, color: color.slate500 },
 });

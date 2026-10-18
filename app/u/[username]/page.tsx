@@ -3,10 +3,12 @@ import Link from "next/link";
 import { TopBar } from "@/components/Nav";
 import { QrCode } from "@/components/QrCode";
 import { CopyField } from "@/components/CopyField";
-import { Badge, Card } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { env } from "@/lib/env";
+import { activeChain } from "@/config/chain";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +43,18 @@ export default async function PublicProfilePage({
     <div className="app-shell">
       <TopBar user={viewer} />
       <main id="main" className="app-body">
-        <div className="shell" style={{ maxWidth: 560, paddingTop: 44, paddingBottom: 90 }}>
-          <Card>
-            <div style={{ padding: 24 }}>
-              <div className="row" style={{ gap: 14 }}>
-                <span className="avatar" style={{ width: 48, height: 48, fontSize: 17 }}>
+        <div className="shell public-pay-page">
+          <div className="pay-page-head">
+            <div>
+              <p className="eyebrow">CloakPay payment identity</p>
+            </div>
+            <Badge kind="info">By username only</Badge>
+          </div>
+
+          <div className="pay-identity-grid">
+            <section className="pay-identity-card" aria-labelledby="pay-identity-name">
+              <div className="pay-identity-top">
+                <span className="pay-avatar" aria-hidden="true">
                   {profile.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profile.avatar_url} alt="" />
@@ -53,37 +62,59 @@ export default async function PublicProfilePage({
                     profile.username.slice(0, 1).toUpperCase()
                   )}
                 </span>
-                <div>
-                  <h1 style={{ fontSize: 21 }}>@{profile.username}</h1>
-                  {profile.display_name ? <p className="tiny muted">{profile.display_name}</p> : null}
+                <div style={{ minWidth: 0 }}>
+                  <p className="pay-eyebrow">Pay this account</p>
+                  <h1 id="pay-identity-name" className="pay-name">@{profile.username}</h1>
+                  {profile.display_name ? <p className="pay-display-name">{profile.display_name}</p> : null}
                 </div>
               </div>
 
-              <div className="row" style={{ gap: 8, marginTop: 16 }}>
-                <Badge kind="info">Pays by username</Badge>
+              <div className="pay-methods" aria-label="Payment details">
+                <div className="pay-method">
+                  <span>Payment method</span>
+                  <strong>CloakPay username</strong>
+                </div>
+                <div className="pay-method">
+                  <span>Network</span>
+                  <strong>{activeChain.name} · {activeChain.nativeToken.symbol}</strong>
+                </div>
               </div>
 
-              <div style={{ marginTop: 22 }}>
+              <div className="pay-link-block">
                 <CopyField label="Payment link" value={identity} />
               </div>
 
-              <div style={{ marginTop: 22, textAlign: "center" }}>
-                <QrCode value={identity} />
-                <p className="tiny muted" style={{ marginTop: 10 }}>
-                  Scanning opens CloakPay and pre-fills the recipient.
-                </p>
-              </div>
-
-              <div className="row" style={{ gap: 8, marginTop: 22, justifyContent: "center" }}>
+              <div className="pay-cta">
                 <Link href={`/send?to=${profile.username}`} className="btn btn-primary">
                   Pay @{profile.username}
+                  <Icon name="arrowRight" size={16} strokeWidth={1.9} />
+                </Link>
+                <Link href="/how-it-works" className="btn btn-secondary">
+                  How it works
                 </Link>
               </div>
-            </div>
-          </Card>
-          <p className="tiny muted" style={{ marginTop: 16, textAlign: "center" }}>
-            This page shows a payment identity only — no wallet address.
-          </p>
+
+              <p className="pay-private-note">
+                <Icon name="shield" size={14} strokeWidth={1.7} />
+                <span>
+                  Your wallet address is not shown to the recipient. A payment to this username is resolved
+                  inside CloakPay.
+                </span>
+              </p>
+            </section>
+
+            <aside className="pay-qr-card" aria-label={`QR code to pay @${profile.username}`}>
+              <QrCode value={identity} size={224} />
+              <h2 className="pay-qr-title">Scan to pay @{profile.username}</h2>
+              <p className="pay-qr-copy">
+                Opens this payment identity and pre-fills the recipient. The QR contains this public link
+                only.
+              </p>
+              <Badge kind="public">Username payment</Badge>
+            </aside>
+          </div>
+
+          <p className="pay-page-note">This page shows a payment identity only — no wallet address.</p>
         </div>
       </main>
     </div>

@@ -125,18 +125,38 @@ export function Wordmark({
   height = 18,
   tone = "auto",
   className,
+  fluid = false,
 }: {
   height?: number;
   tone?: BrandTone;
   className?: string;
+  /** Lets the stylesheet size the wordmark while preserving its intrinsic ratio. */
+  fluid?: boolean;
 }) {
   const width = Math.round(height * WORDMARK_RATIO);
-  const style = { height, width: height * WORDMARK_RATIO };
+  const style = fluid ? undefined : { height, width: height * WORDMARK_RATIO };
   const common = { width, height, style, className, alt: "CloakPay" };
 
   if (tone === "dark") return <Single src="/brand/wordmark.png" {...common} />;
   if (tone === "light") return <Single src="/brand/wordmark-light.png" {...common} />;
   return <Pair darkSrc="/brand/wordmark.png" lightSrc="/brand/wordmark-light.png" {...common} />;
+}
+
+/**
+ * The large, vertical brand composition used by the landing page. The official
+ * symbol and official lettering stay separate assets, centred as one lockup;
+ * the wordmark is never rendered as substitute body text.
+ */
+export function HeroBrand({ descriptor = "Private · Fast · Global" }: { descriptor?: string }) {
+  return (
+    <div className="hero-brand" aria-label="CloakPay">
+      <span className="hero-brand-halo" aria-hidden="true" />
+      <Mark size={320} fluid className="hero-brand-mark" />
+      <Wordmark height={42} fluid className="hero-brand-wordmark" />
+      <span className="hero-brand-rule" aria-hidden="true" />
+      <span className="hero-brand-descriptor">{descriptor}</span>
+    </div>
+  );
 }
 
 /**

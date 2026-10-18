@@ -10,7 +10,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { BADGE_LABEL, TOUCH_TARGET, badgeTone, color, radius, shadow, space, type } from "../theme";
+import { BADGE_LABEL, badgeTone, color, radius, shadow, space, type } from "../theme";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -177,7 +177,7 @@ export function Mono({ children, style }: { children: React.ReactNode; style?: S
 
 const buttonVariants: Record<ButtonVariant, ViewStyle> = {
   primary: { backgroundColor: color.ink900, borderColor: color.ink900 },
-  secondary: { backgroundColor: color.paper0, borderColor: color.line },
+  secondary: { backgroundColor: color.glassStrong, borderColor: color.glassBorder },
   ghost: { backgroundColor: "transparent", borderColor: "transparent" },
   danger: { backgroundColor: color.err100, borderColor: "#efd2ce" },
 };
@@ -198,7 +198,7 @@ const noticeTone = {
 
 const styles = StyleSheet.create({
   btn: {
-    minHeight: TOUCH_TARGET,
+    minHeight: 48,
     paddingHorizontal: space.lg,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -211,10 +211,10 @@ const styles = StyleSheet.create({
   btnLabel: { fontSize: 15, fontWeight: "600" },
 
   card: {
-    backgroundColor: color.paper0,
-    borderColor: color.lineSoft,
+    backgroundColor: color.glassSurface,
+    borderColor: color.glassBorder,
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: space.xl,
     ...shadow.card,
   },
@@ -239,15 +239,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: color.line,
+    borderColor: color.glassBorder,
     borderRadius: radius.md,
-    backgroundColor: color.paper0,
+    backgroundColor: color.glassStrong,
     paddingHorizontal: space.md,
-    minHeight: TOUCH_TARGET,
+    minHeight: 48,
   },
   inputDisabled: { backgroundColor: color.paper100 },
   inputPrefix: { color: color.slate500, fontSize: 15, marginRight: 2 },
-  input: { flex: 1, fontSize: 15, color: color.ink900, paddingVertical: 10 },
+  input: { flex: 1, fontSize: 15, color: color.ink900, paddingVertical: 11 },
   inputMultiline: { minHeight: 72, textAlignVertical: "top" },
   hint: { ...type.tiny, color: color.slate500 },
 
@@ -258,11 +258,12 @@ const styles = StyleSheet.create({
   empty: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: color.line,
-    borderRadius: radius.lg,
+    borderColor: color.glassBorder,
+    borderRadius: radius.xl,
     padding: space.xxl,
     alignItems: "center",
     gap: space.sm,
+    backgroundColor: color.glassSoft,
   },
   emptyTitle: { fontWeight: "600", fontSize: 15, color: color.ink900 },
   emptyBody: { ...type.small, color: color.slate600, textAlign: "center" },

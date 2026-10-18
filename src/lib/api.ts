@@ -34,7 +34,16 @@ export function assertSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return true; // same-origin fetches may omit it
   try {
-    return new URL(origin).host === new URL(request.url).host;
+    const originHost = new URL(origin).host;
+    // `request.url` is not guaranteed to preserve the public host in every
+    // deployment (and a local 127.0.0.1 request can be reconstructed with the
+    // machine name). Compare every trustworthy host form the request carries.
+    const candidates = [
+      new URL(request.url).host,
+      request.headers.get("host"),
+      request.headers.get("x-forwarded-host")?.split(",")[0]?.trim(),
+    ].filter((host): host is string => Boolean(host));
+    return candidates.includes(originHost);
   } catch {
     return false;
   }

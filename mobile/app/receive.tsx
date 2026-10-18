@@ -92,8 +92,13 @@ export default function Receive() {
         </Text>
 
         <Card style={styles.card}>
+          <Text style={styles.qrEyebrow}>Scan to pay</Text>
           <View style={styles.qrWrap}>
-            <QRCode value={identity} size={188} backgroundColor={color.paper0} color={color.ink950} />
+            <View style={styles.qrShell}>
+              <View style={styles.qrFrame}>
+                <QRCode value={identity} size={190} backgroundColor={color.paper0} color={color.ink950} />
+              </View>
+            </View>
           </View>
           <Text style={styles.qrCaption}>{identity}</Text>
           <View style={styles.actions}>
@@ -199,14 +204,10 @@ const styles = StyleSheet.create({
   muted: { ...type.small, color: color.slate600 },
   card: { marginTop: space.md },
   cardTitle: { ...type.heading, color: color.ink950, marginBottom: 6 },
-  qrWrap: {
-    alignSelf: "center",
-    padding: space.lg,
-    backgroundColor: color.paper0,
-    borderWidth: 1,
-    borderColor: color.lineSoft,
-    borderRadius: radius.lg,
-  },
+  qrEyebrow: { ...type.label, color: color.slate500, textAlign: "center" },
+  qrWrap: { alignSelf: "center", marginTop: space.md },
+  qrShell: { padding: 7, borderWidth: 1, borderColor: color.glassBorder, borderRadius: 23, backgroundColor: color.glassSoft },
+  qrFrame: { padding: 13, borderWidth: 1, borderColor: "rgba(20,23,27,0.10)", borderRadius: 17, backgroundColor: color.paper0 },
   qrCaption: { ...type.tiny, color: color.slate500, textAlign: "center", marginTop: space.md },
   actions: { flexDirection: "row", gap: space.sm, marginTop: space.lg },
   grow: { flex: 1 },

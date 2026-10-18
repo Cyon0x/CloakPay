@@ -36,9 +36,15 @@ export const color = {
   info100: "#e5eef6",
   shield600: "#3f3a6b",
   shield100: "#eceaf4",
+  glassSurface: "rgba(255, 255, 255, 0.78)",
+  glassStrong: "rgba(255, 255, 255, 0.92)",
+  glassSoft: "rgba(255, 255, 255, 0.48)",
+  glassBorder: "rgba(20, 23, 27, 0.085)",
+  glassChrome: "rgba(250, 249, 247, 0.96)",
+  glassHighlight: "rgba(255, 255, 255, 0.94)",
 } as const;
 
-export const radius = { xs: 4, sm: 6, md: 10, lg: 14, xl: 20, pill: 999 } as const;
+export const radius = { xs: 4, sm: 8, md: 12, lg: 18, xl: 22, pill: 999 } as const;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 22, xxl: 32 } as const;
 
@@ -58,10 +64,10 @@ export const type = {
 export const shadow = {
   card: {
     shadowColor: "#14171b",
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   raised: {
     shadowColor: "#14171b",

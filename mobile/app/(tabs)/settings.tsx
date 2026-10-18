@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api, APP_URL } from "../../src/api";
 import { useAuth } from "../../src/auth";
@@ -40,7 +40,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pushEnabled, setPushEnabled] = useState(true);
+  const [markingRead, setMarkingRead] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +80,20 @@ export default function Settings() {
     }
   }
 
+  async function markNotificationsRead() {
+    setMarkingRead(true);
+    setError(null);
+    try {
+      await api("/api/notifications", { method: "PATCH", body: JSON.stringify({}) });
+      const now = new Date().toISOString();
+      setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? now })));
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setMarkingRead(false);
+    }
+  }
+
   if (loading) return <Loading label="Loading your settings" />;
 
   return (
@@ -88,8 +102,17 @@ export default function Settings() {
         <View style={styles.header}>
           <Lockup markSize={24} />
         </View>
-        <Text style={styles.title}>@{user?.username}</Text>
-        <Text style={styles.muted}>{user?.displayName ?? "No display name set"}</Text>
+        <View style={styles.identityCard}>
+          <View style={styles.identityAvatar}>
+            <Text style={styles.identityInitial}>{(user?.displayName ?? user?.username ?? "C").slice(0, 1).toUpperCase()}</Text>
+          </View>
+          <View style={styles.identityCopy}>
+            <Text style={styles.identityEyebrow}>CloakPay account</Text>
+            <Text style={styles.title}>@{user?.username}</Text>
+            <Text style={styles.muted}>{user?.displayName ?? "No display name set"}</Text>
+          </View>
+          <Badge kind="public" />
+        </View>
 
         {error ? (
           <View style={styles.block}>
@@ -168,30 +191,34 @@ export default function Settings() {
         </Card>
 
         <Card style={styles.card}>
-          <View style={styles.kv}>
-            <Text style={styles.cardTitle}>Notifications</Text>
-            <Switch
-              value={pushEnabled}
-              onValueChange={setPushEnabled}
-              trackColor={{ true: color.ink900, false: color.lineStrong }}
-              accessibilityLabel="Notifications"
-            />
-          </View>
+          <Text style={styles.cardTitle}>Notifications</Text>
           <Text style={styles.hint}>
-            {pushEnabled
-              ? "In-app alerts for payments, links and account changes. Preview text never includes an amount or a counterparty."
-              : "Turned off. Alerts still land in your activity list."}
+            Payments and confirmations for your username appear here. Preview text never includes an
+            amount or a counterparty.
           </Text>
           {notifications.length > 0 ? (
             <View style={styles.divider}>
               {notifications.map((item) => (
                 <View key={item.id} style={styles.notification}>
-                  <Text style={styles.notificationTitle}>{item.title}</Text>
+                  <View style={styles.notificationHead}>
+                    {!item.read_at ? <View style={styles.notificationDot} /> : null}
+                    <Text style={styles.notificationTitle}>{item.title}</Text>
+                  </View>
                   {item.body ? <Text style={styles.hint}>{item.body}</Text> : null}
                 </View>
               ))}
             </View>
-          ) : null}
+          ) : (
+            <Text style={styles.hint}>You&apos;re all caught up.</Text>
+          )}
+          <Button
+            title={markingRead ? "Marking…" : "Mark all read"}
+            variant="secondary"
+            loading={markingRead}
+            disabled={notifications.every((item) => item.read_at)}
+            onPress={markNotificationsRead}
+            style={styles.action}
+          />
         </Card>
 
         <Card style={styles.card}>
@@ -259,6 +286,11 @@ const styles = StyleSheet.create({
   header: { marginBottom: space.md },
   title: { ...type.title, color: color.ink950 },
   muted: { ...type.small, color: color.slate600 },
+  identityCard: { flexDirection: "row", alignItems: "center", gap: space.lg, padding: space.lg, borderWidth: 1, borderColor: color.glassBorder, borderRadius: radius.xl, backgroundColor: color.glassSurface, marginBottom: space.sm, shadowColor: "#14171b", shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  identityAvatar: { width: 54, height: 54, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: color.glassBorder, borderRadius: 17, backgroundColor: color.paper100 },
+  identityInitial: { fontSize: 20, fontWeight: "600", color: color.ink900 },
+  identityCopy: { flex: 1, minWidth: 0 },
+  identityEyebrow: { ...type.label, color: color.slate500, marginBottom: 2 },
   block: { marginTop: space.md },
   card: { marginTop: space.md },
   cardTitle: { ...type.heading, color: color.ink950, marginBottom: 6 },
@@ -272,6 +304,8 @@ const styles = StyleSheet.create({
   inlineText: { color: color.accent700, fontWeight: "600", fontSize: 13 },
   divider: { marginTop: space.md, borderTopWidth: 1, borderTopColor: color.lineSoft, paddingTop: space.sm },
   notification: { paddingVertical: space.sm, gap: 2 },
+  notificationHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  notificationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.ink900 },
   notificationTitle: { fontSize: 14, fontWeight: "500", color: color.ink900 },
   foot: { ...type.tiny, color: color.slate500, marginTop: space.xl },
 });

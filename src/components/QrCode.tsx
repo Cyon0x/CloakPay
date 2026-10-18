@@ -15,11 +15,18 @@ export function QrCode({ value, size = 208 }: { value: string; size?: number }) 
   useEffect(() => {
     let cancelled = false;
     if (!canvasRef.current) return;
+    // Render at device resolution and let CSS own the layout size. A 208px
+    // canvas on a 2x or 3x phone display is visibly soft, and a blurry QR is a
+    // scanning problem rather than a cosmetic one.
+    const ratio = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    const canvas = canvasRef.current;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
     QRCode.toCanvas(canvasRef.current, value, {
-      width: size,
-      margin: 1,
+      width: Math.round(size * ratio),
+      margin: 2,
       errorCorrectionLevel: "M",
-      color: { dark: "#14171b", light: "#ffffff" },
+      color: { dark: "#111318", light: "#ffffff" },
     }).catch(() => {
       if (!cancelled) setFailed(true);
     });
@@ -32,8 +39,16 @@ export function QrCode({ value, size = 208 }: { value: string; size?: number }) 
     return <p className="tiny muted">Could not render the QR code. Use the link instead.</p>;
   }
   return (
-    <div className="qr-frame">
-      <canvas ref={canvasRef} width={size} height={size} aria-label={`QR code for ${value}`} role="img" />
+    <div className="qr-shell">
+      <div className="qr-frame">
+        <canvas
+          ref={canvasRef}
+          width={size}
+          height={size}
+          aria-label={`QR code for ${value}`}
+          role="img"
+        />
+      </div>
     </div>
   );
 }
