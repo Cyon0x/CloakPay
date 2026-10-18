@@ -12,6 +12,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { API_URL, api, getToken, setToken } from "./api";
+import { readableError } from "./errors";
 
 export interface SessionUser {
   userId: string;
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await refresh();
       return { ok: true };
     } catch (error) {
-      return { ok: false, message: (error as Error).message };
+      return { ok: false, message: readableError(error, 'Sign-in did not finish. Try again.') };
     }
   }, [refresh]);
 

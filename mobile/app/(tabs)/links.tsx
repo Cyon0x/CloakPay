@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Link } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { Link, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { APP_URL, api } from "../../src/api";
 import { Badge, Button, Card, EmptyState, Field, Loading, Notice } from "../../src/components/ui";
 import { loadPool, type PoolDenomination } from "../../src/pool";
 import { formatWei } from "../../src/format";
 import { color, radius, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 interface PaymentLink {
   code: string;
@@ -44,7 +44,7 @@ export default function Links() {
       .catch(() => undefined);
     api<{ links: PaymentLink[] }>("/api/links")
       .then((data) => setLinks(data.links))
-      .catch((caught) => setError((caught as Error).message))
+      .catch((caught) => setError(readableError(caught, 'Payment links could not be loaded. Try again.')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -74,7 +74,7 @@ export default function Links() {
       setTitle("");
       load();
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'Payment links could not be loaded. Try again.'));
     } finally {
       setCreating(false);
     }

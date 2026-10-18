@@ -9,6 +9,7 @@ import { Icon } from "./Icon";
 import { NotificationsBell } from "./NotificationsBell";
 import { ThemeToggle } from "./ThemeToggle";
 import { useInstallApp } from "@/lib/client/install";
+import { useNotifications } from "@/lib/client/useNotifications";
 import type { SessionUser } from "@/lib/session";
 
 export interface NavUser {
@@ -47,6 +48,7 @@ const MOBILE_ITEMS = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/activity", label: "Activity", icon: "activity" },
   { href: "/send", label: "Send", icon: "send", primary: true },
+  { href: "/notifications", label: "Alerts", icon: "bell" },
   { href: "/links", label: "Links", icon: "link" },
   { href: "/settings", label: "You", icon: "user" },
 ];
@@ -149,6 +151,7 @@ export function TopBar({
         { href: "/send", label: "Send", icon: "send" },
         { href: "/receive", label: "Receive", icon: "receive" },
         { href: "/activity", label: "Activities", icon: "activity" },
+        { href: "/notifications", label: "Notifications", icon: "bell" },
         { href: "/transactions", label: "All transactions", icon: "list" },
         { href: "/links", label: "Payment links", icon: "link" },
         { href: "/faucet", label: "Faucet", icon: "gift" },
@@ -432,6 +435,7 @@ export function AppSidebar({ user }: { user: NavUser | SessionUser | null }) {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { unread } = useNotifications({ pollMs: 60_000 });
   return (
     <nav className="mobile-nav" aria-label="Primary, mobile">
       {MOBILE_ITEMS.map((item) =>
@@ -454,7 +458,14 @@ export function MobileNav() {
             className="nav-link"
             aria-current={isCurrent(pathname, item.href) ? "page" : undefined}
           >
-            <Icon name={item.icon} />
+            <span className="mobile-nav-icon">
+              <Icon name={item.icon} />
+              {item.href === "/notifications" && unread > 0 ? (
+                <span className="mobile-nav-badge" aria-label={`${unread} unread`}>
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              ) : null}
+            </span>
             <span>{item.label}</span>
           </Link>
         ),

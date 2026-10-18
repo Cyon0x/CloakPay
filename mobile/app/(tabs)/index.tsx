@@ -1,8 +1,7 @@
 import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, RefreshControl } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Link } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { Link, useFocusEffect } from "expo-router";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/auth";
 import { Badge, Button, Card, EmptyState, Loading } from "../../src/components/ui";
@@ -12,6 +11,7 @@ import { activeChain } from "../../src/chain";
 import { readBalance } from "../../src/transfer";
 import { formatWei } from "../../src/format";
 import { color, radius, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 interface Payment {
   id: string;
@@ -50,7 +50,7 @@ export default function Dashboard() {
         setBalance(await readBalance(walletData.wallet.address as `0x${string}`));
       }
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'Your wallet could not be loaded. Pull to refresh.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,8 +138,10 @@ export default function Dashboard() {
 
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Recent activity</Text>
-          <Link href="/(tabs)/activity">
-            <Text style={styles.viewAll}>View all</Text>
+          <Link href="/(tabs)/activity" asChild>
+            <Pressable style={styles.viewAllBtn} accessibilityRole="link">
+              <Text style={styles.viewAll}>View all</Text>
+            </Pressable>
           </Link>
         </View>
         {payments.length === 0 ? (
@@ -211,6 +213,7 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, marginTop: space.xxl, marginBottom: space.md },
   sectionTitle: { ...type.heading, color: color.ink950 },
   viewAll: { ...type.tiny, color: color.slate600, fontWeight: "500" },
+  viewAllBtn: { minHeight: 44, justifyContent: "center", paddingLeft: space.md },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: space.md, gap: space.md },
   divider: { borderTopWidth: 1, borderTopColor: color.glassBorder },
   rowMain: { flex: 1, gap: 5 },

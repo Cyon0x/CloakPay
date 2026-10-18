@@ -16,7 +16,11 @@ export async function GET() {
       order by created_at desc
       limit 50
     `;
-    return ok({ notifications: rows });
+    const counts = await db()<{ count: number }[]>`
+      select count(*)::int as count from notifications
+      where user_id = ${user.userId} and read_at is null
+    `;
+    return ok({ notifications: rows, unread: counts[0]?.count ?? 0 });
   } catch (error) {
     return handle(error);
   }
@@ -26,11 +30,12 @@ export async function PATCH(request: Request) {
   try {
     if (!assertSameOrigin(request)) return fail(403, "bad_origin", "Request rejected.");
     const user = await requireUser();
-    await db()`
+    const marked = await db()`
       update notifications set read_at = now()
       where user_id = ${user.userId} and read_at is null
+      returning id
     `;
-    return ok({ marked: true });
+    return ok({ marked: marked.length, unread: 0 });
   } catch (error) {
     return handle(error);
   }

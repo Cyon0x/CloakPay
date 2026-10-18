@@ -9,6 +9,7 @@ import { useAuth } from "../src/auth";
 import { Button, Card, Field, Notice } from "../src/components/ui";
 import { loadPool, type PoolInfo } from "../src/pool";
 import { color, radius, space, type } from "../src/theme";
+import { readableError } from "../src/errors";
 
 /**
  * Receive.
@@ -72,7 +73,7 @@ export default function Receive() {
       });
       setCreated(result.code);
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'Your payment details could not be loaded. Try again.'));
     } finally {
       setCreating(false);
     }
@@ -197,7 +198,7 @@ export default function Receive() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.paper50 },
   body: { padding: space.xl, paddingBottom: 120, gap: space.sm },
-  back: { paddingVertical: space.sm, alignSelf: "flex-start" },
+  back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   backText: { color: color.accent700, fontWeight: "600", fontSize: 14 },
   eyebrow: { ...type.label, color: color.slate500 },
   title: { ...type.display, color: color.ink950 },
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: space.sm, marginTop: space.lg },
   grow: { flex: 1 },
   action: { marginTop: space.lg },
-  inline: { marginTop: space.lg, alignSelf: "center" },
+  inline: { minHeight: 44, justifyContent: "center", marginTop: space.lg, alignSelf: "center", paddingHorizontal: space.sm },
   inlineText: { color: color.accent700, fontWeight: "600", fontSize: 13 },
   label: { ...type.label, color: color.slate500 },
   fieldGap: { marginTop: space.md },

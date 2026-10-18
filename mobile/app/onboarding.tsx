@@ -10,6 +10,7 @@ import { Lockup } from "../src/components/Logo";
 import { createWallet } from "../src/wallet";
 import { activeChain } from "../src/chain";
 import { color, radius, space, type } from "../src/theme";
+import { readableError } from "../src/errors";
 
 type Stage = "username" | "wallet" | "recovery";
 
@@ -56,7 +57,7 @@ export default function Onboarding() {
       });
       setStage("wallet");
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'That step did not finish. Try again.'));
     } finally {
       setBusy(false);
     }
@@ -88,7 +89,7 @@ export default function Onboarding() {
       setMnemonic(secret.mnemonic);
       setStage("recovery");
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'That step did not finish. Try again.'));
     } finally {
       setBusy(false);
     }
@@ -101,7 +102,7 @@ export default function Onboarding() {
       await refresh();
       router.replace("/(tabs)");
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'That step did not finish. Try again.'));
     } finally {
       setBusy(false);
     }

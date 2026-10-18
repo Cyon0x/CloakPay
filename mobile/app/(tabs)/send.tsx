@@ -14,6 +14,7 @@ import { api } from "../../src/api";
 import { formatWei } from "../../src/format";
 import { activeChain } from "../../src/chain";
 import { color, radius, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 type Privacy = "private" | "public";
 
@@ -54,7 +55,7 @@ export default function Send() {
         setWalletAddress(walletData.wallet?.address ?? null);
         setDenominationId(poolData.pool.denominations[1]?.id ?? poolData.pool.denominations[0]?.id ?? "");
       } catch (error) {
-        setLoadError((error as Error).message);
+        setLoadError(readableError(error, 'Your wallet could not be loaded. Try again.'));
       }
     })();
   }, []);

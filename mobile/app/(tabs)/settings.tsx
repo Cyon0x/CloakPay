@@ -1,59 +1,52 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { api, APP_URL } from "../../src/api";
 import { useAuth } from "../../src/auth";
+import { useNotifications } from "../../src/notifications";
 import { Badge, Button, Card, Field, Loading, Mono, Notice } from "../../src/components/ui";
 import { Lockup } from "../../src/components/Logo";
 import { activeChain } from "../../src/chain";
 import { hasWalletOnDevice, isUnlocked } from "../../src/wallet";
 import { color, radius, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 interface WalletResponse {
   wallet: { address: string | null; viewingKeyId: string | null } | null;
 }
 
-interface Notification {
-  id: string;
-  kind: string;
-  title: string;
-  body: string | null;
-  read_at: string | null;
-  created_at: string;
-}
-
 /**
  * You.
  *
- * Account, wallet, recovery, notifications and sign out live here. Nothing on
- * this screen states a custody claim the implementation cannot back: the wallet
- * is described as self-custodial because the key is generated on the device and
+ * Account, wallet, recovery and sign out live here. Notifications have their
+ * own tab, so this screen only points at the inbox. Nothing on this screen
+ * states a custody claim the implementation cannot back: the wallet is
+ * described as self-custodial because the key is generated on the device and
  * the server only ever holds a sealed envelope.
  */
 export default function Settings() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
+  const { unread } = useNotifications();
   const [wallet, setWallet] = useState<WalletResponse["wallet"]>(null);
   const [onDevice, setOnDevice] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [markingRead, setMarkingRead] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [walletData, notificationData, device] = await Promise.all([
+      const [walletData, device] = await Promise.all([
         api<WalletResponse>("/api/wallet"),
-        api<{ notifications: Notification[] }>("/api/notifications"),
         hasWalletOnDevice(),
       ]);
       setWallet(walletData.wallet);
-      setNotifications(notificationData.notifications.slice(0, 4));
       setOnDevice(device);
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'Your account details could not be loaded. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -74,23 +67,9 @@ export default function Settings() {
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(readableError(caught, 'Your account details could not be loaded. Try again.'));
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function markNotificationsRead() {
-    setMarkingRead(true);
-    setError(null);
-    try {
-      await api("/api/notifications", { method: "PATCH", body: JSON.stringify({}) });
-      const now = new Date().toISOString();
-      setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? now })));
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setMarkingRead(false);
     }
   }
 
@@ -193,30 +172,13 @@ export default function Settings() {
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Notifications</Text>
           <Text style={styles.hint}>
-            Payments and confirmations for your username appear here. Preview text never includes an
-            amount or a counterparty.
+            Payments and confirmations live in the Alerts tab, with an unread count in the tab bar.
+            Preview text never includes an amount or a counterparty.
           </Text>
-          {notifications.length > 0 ? (
-            <View style={styles.divider}>
-              {notifications.map((item) => (
-                <View key={item.id} style={styles.notification}>
-                  <View style={styles.notificationHead}>
-                    {!item.read_at ? <View style={styles.notificationDot} /> : null}
-                    <Text style={styles.notificationTitle}>{item.title}</Text>
-                  </View>
-                  {item.body ? <Text style={styles.hint}>{item.body}</Text> : null}
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.hint}>You&apos;re all caught up.</Text>
-          )}
           <Button
-            title={markingRead ? "Marking…" : "Mark all read"}
+            title={unread > 0 ? `Open notifications · ${unread} unread` : "Open notifications"}
             variant="secondary"
-            loading={markingRead}
-            disabled={notifications.every((item) => item.read_at)}
-            onPress={markNotificationsRead}
+            onPress={() => router.push("/notifications")}
             style={styles.action}
           />
         </Card>
@@ -302,10 +264,5 @@ const styles = StyleSheet.create({
   action: { marginTop: space.lg },
   inline: { marginTop: space.sm, alignSelf: "flex-start" },
   inlineText: { color: color.accent700, fontWeight: "600", fontSize: 13 },
-  divider: { marginTop: space.md, borderTopWidth: 1, borderTopColor: color.lineSoft, paddingTop: space.sm },
-  notification: { paddingVertical: space.sm, gap: 2 },
-  notificationHead: { flexDirection: "row", alignItems: "center", gap: 6 },
-  notificationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.ink900 },
-  notificationTitle: { fontSize: 14, fontWeight: "500", color: color.ink900 },
   foot: { ...type.tiny, color: color.slate500, marginTop: space.xl },
 });

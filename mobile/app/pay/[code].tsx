@@ -12,6 +12,7 @@ import { isUnlocked } from "../../src/wallet";
 import { loadPool, type PoolInfo } from "../../src/pool";
 import { formatWei } from "../../src/format";
 import { color, radius, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 interface CheckoutLink {
   code: string;
@@ -62,7 +63,7 @@ export default function Checkout() {
         setLink(linkData.link);
         setPool(poolData);
       })
-      .catch((caught) => setError((caught as Error).message));
+      .catch((caught) => setError(readableError(caught, 'This payment link could not be loaded. Try again.')));
   }, [code]);
 
   if (!ready || (!link && !error)) return <Loading label="Loading the request" />;

@@ -28,8 +28,10 @@ export async function PATCH(
     if (!parsed.success) return fail(400, "invalid_body", "That update was not valid.");
     const body = parsed.data;
 
-    const rows = await db()<{ from_user_id: string | null; to_user_id: string | null }[]>`
-      select from_user_id, to_user_id from payments where id = ${id}
+    const rows = await db()<
+      { from_user_id: string | null; to_user_id: string | null; status: string }[]
+    >`
+      select from_user_id, to_user_id, status from payments where id = ${id}
     `;
     const payment = rows[0];
     if (!payment) return fail(404, "not_found", "No such payment.");
@@ -51,12 +53,44 @@ export async function PATCH(
       where id = ${id}
     `;
 
-    if (body.status === "confirmed" && payment.from_user_id) {
+    const settled = body.status === "confirmed" && payment.status !== "confirmed";
+    const failed = body.status === "failed" && payment.status !== "failed";
+
+    if (settled) {
+      if (payment.from_user_id) {
+        await db()`
+          insert into notifications (user_id, kind, title, body, payload)
+          values (
+            ${payment.from_user_id}, 'payment.confirmed', 'Payment confirmed',
+            ${"The payment you sent has settled."}, ${db().json({ paymentId: id })}
+          )
+        `;
+      }
+      if (payment.to_user_id) {
+        // The recipient's "waiting" notice is replaced by the settled one so a
+        // stale pending row does not sit above the confirmation.
+        await db()`
+          update notifications set read_at = now()
+          where user_id = ${payment.to_user_id}
+            and read_at is null
+            and payload->>'paymentId' = ${id}
+        `;
+        await db()`
+          insert into notifications (user_id, kind, title, body, payload)
+          values (
+            ${payment.to_user_id}, 'payment.received.confirmed', 'Payment received',
+            ${"The payment is ready in your activity."}, ${db().json({ paymentId: id })}
+          )
+        `;
+      }
+    }
+
+    if (failed && payment.from_user_id) {
       await db()`
-        insert into notifications (user_id, kind, title, payload)
+        insert into notifications (user_id, kind, title, body, payload)
         values (
-          ${payment.from_user_id}, 'payment.confirmed', 'Payment confirmed',
-          ${db().json({ paymentId: id })}
+          ${payment.from_user_id}, 'payment.failed', 'Payment did not go through',
+          ${"Open the payment to see what happened."}, ${db().json({ paymentId: id })}
         )
       `;
     }

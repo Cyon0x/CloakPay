@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { api } from "../../src/api";
 import { Badge, Card, EmptyState, Loading } from "../../src/components/ui";
 import { formatWei } from "../../src/format";
 import { color, space, type } from "../../src/theme";
+import { readableError } from "../../src/errors";
 
 interface Payment {
   id: string;
@@ -28,7 +29,7 @@ export default function Activity() {
     useCallback(() => {
       api<{ payments: Payment[] }>("/api/payments")
         .then((data) => setPayments(data.payments))
-        .catch((caught) => setError((caught as Error).message))
+        .catch((caught) => setError(readableError(caught, 'Payments could not be loaded. Pull to refresh.')))
         .finally(() => setLoading(false));
     }, []),
   );

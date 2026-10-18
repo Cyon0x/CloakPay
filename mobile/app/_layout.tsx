@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
 import { AuthProvider } from "../src/auth";
+import { NotificationsProvider } from "../src/notifications";
 import { color } from "../src/theme";
 
 /**
@@ -38,14 +39,16 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: color.paper50 },
-            headerShadowVisible: false,
-          }}
-        />
+        <NotificationsProvider>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: color.paper50 },
+              headerShadowVisible: false,
+            }}
+          />
+        </NotificationsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

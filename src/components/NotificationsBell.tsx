@@ -3,104 +3,60 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./Icon";
-
-interface NotificationRow {
-  id: string;
-  kind: string;
-  title: string;
-  body: string | null;
-  payload: unknown;
-  read_at: string | null;
-  created_at: string;
-}
-
-type PanelState = "idle" | "loading" | "ready" | "error";
-
-function paymentHref(payload: unknown): string {
-  if (!payload || typeof payload !== "object") return "/activity";
-  const paymentId = (payload as { paymentId?: unknown }).paymentId;
-  return typeof paymentId === "string" && paymentId.length > 0
-    ? `/transactions/${encodeURIComponent(paymentId)}`
-    : "/activity";
-}
-
-function notificationIcon(kind: string): string {
-  if (kind === "payment.confirmed") return "check";
-  if (kind === "payment.received.private") return "shield";
-  return "receive";
-}
-
-function relativeTime(value: string): string {
-  const then = new Date(value).getTime();
-  if (!Number.isFinite(then)) return "";
-  const seconds = Math.round((then - Date.now()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (Math.abs(seconds) < 60) return formatter.format(seconds, "second");
-  const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
-  const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
-  const days = Math.round(hours / 24);
-  if (Math.abs(days) < 14) return formatter.format(days, "day");
-  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
+import { NotificationList } from "./NotificationList";
+import {
+  notificationHref,
+  notificationIconName,
+  useNotifications,
+  type NotificationItem,
+} from "@/lib/client/useNotifications";
 
 /**
- * The header bell used to open the settings page. This is the real inbox for
- * the notifications the payment API already records. It reads the same rows,
- * never adds an amount to preview text, and links each row to the payment it
- * describes. "Mark all read" uses the existing PATCH endpoint.
+ * The header bell.
+ *
+ * This is the inbox for the notifications the payment API already records. It
+ * reads the same rows as the full inbox page, never adds an amount to preview
+ * text, marks only the row that was opened as read, and raises a quiet in-app
+ * notice when a new one arrives while the app is open.
  */
 export function NotificationsBell() {
   const pathname = usePathname();
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const knownTop = useRef<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
-  const [state, setState] = useState<PanelState>("idle");
-  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
-  const [marking, setMarking] = useState(false);
-
-  const unread = notifications.filter((item) => !item.read_at).length;
-
-  const load = useCallback(async () => {
-    setState((current) => (current === "ready" ? current : "loading"));
-    try {
-      const response = await fetch("/api/notifications", { cache: "no-store" });
-      const body = (await response.json()) as {
-        ok: boolean;
-        data?: { notifications: NotificationRow[] };
-        error?: { message?: string };
-      };
-      if (!response.ok || !body.ok || !body.data) {
-        throw new Error(body.error?.message ?? "Notifications could not be loaded.");
-      }
-      setNotifications(body.data.notifications);
-      setState("ready");
-    } catch {
-      setState("error");
-    }
-  }, []);
+  const [toast, setToast] = useState<NotificationItem | null>(null);
+  const { notifications, unread, state, markingAll, markRead, markAllRead, refresh } = useNotifications();
 
   useEffect(() => setMounted(true), []);
 
+  // A route change closes the panel and dismisses any stale arrival notice.
   useEffect(() => {
-    void load();
-    const interval = window.setInterval(() => void load(), 60_000);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [load]);
+    setOpen(false);
+    setToast(null);
+  }, [pathname]);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (state !== "ready" || notifications.length === 0) return;
+    const top = notifications[0];
+    if (knownTop.current === null) {
+      knownTop.current = top.id;
+      return;
+    }
+    if (top.id === knownTop.current) return;
+    knownTop.current = top.id;
+    if (!open && !top.read_at) setToast(top);
+  }, [notifications, open, state]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 7000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,30 +82,10 @@ export function NotificationsBell() {
     };
   }, [open]);
 
-  const markAllRead = useCallback(async () => {
-    if (marking || unread === 0) return;
-    setMarking(true);
-    const now = new Date().toISOString();
-    setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? now })));
-    try {
-      const response = await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      });
-      if (!response.ok) throw new Error("Could not mark notifications read.");
-    } catch {
-      setState("error");
-      void load();
-    } finally {
-      setMarking(false);
-    }
-  }, [load, marking, unread]);
-
   function openNotifications() {
     const next = !open;
     setOpen(next);
-    if (next) void load();
+    if (next) void refresh();
   }
 
   return (
@@ -215,7 +151,7 @@ export function NotificationsBell() {
                     </span>
                     <p className="notifications-empty-title">Couldn&apos;t load notifications</p>
                     <p className="tiny muted">Check your connection and try again.</p>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => void load()}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => void refresh()}>
                       Try again
                     </button>
                   </div>
@@ -237,48 +173,52 @@ export function NotificationsBell() {
                         type="button"
                         className="link notifications-mark"
                         onClick={() => void markAllRead()}
-                        disabled={marking || unread === 0}
+                        disabled={markingAll || unread === 0}
                       >
-                        {marking ? "Marking…" : unread === 0 ? "All read" : "Mark all read"}
+                        {markingAll ? "Marking…" : unread === 0 ? "All read" : "Mark all read"}
                       </button>
                     </div>
-                    <ul className="notifications-list">
-                      {notifications.map((item) => (
-                        <li key={item.id}>
-                          <Link
-                            href={paymentHref(item.payload)}
-                            className={`notification-row${item.read_at ? "" : " is-unread"}`}
-                            onClick={() => void markAllRead()}
-                          >
-                            <span className="notification-icon" aria-hidden="true">
-                              <Icon name={notificationIcon(item.kind)} size={17} strokeWidth={1.7} />
-                            </span>
-                            <span className="notification-copy">
-                              <span className="notification-row-title">
-                                {item.title}
-                                {!item.read_at ? <span className="notification-unread" aria-label="Unread" /> : null}
-                              </span>
-                              {item.body ? <span className="notification-body">{item.body}</span> : null}
-                              <time dateTime={item.created_at} className="notification-time">
-                                {relativeTime(item.created_at)}
-                              </time>
-                            </span>
-                            <Icon name="chevronRight" size={15} strokeWidth={1.8} />
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    <NotificationList
+                      items={notifications}
+                      onOpen={(item) => {
+                        void markRead(item.id);
+                        setOpen(false);
+                      }}
+                    />
                   </>
                 )}
               </div>
 
               <div className="notifications-foot">
-                <Link href="/activity" onClick={() => setOpen(false)}>
-                  Open activity
+                <Link href="/notifications" onClick={() => setOpen(false)}>
+                  View all notifications
                   <Icon name="arrowRight" size={14} strokeWidth={1.8} />
                 </Link>
                 <span>Previews never include an amount.</span>
               </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {mounted && toast
+        ? createPortal(
+            <div className="notification-toast" role="status" aria-live="polite">
+              <span className="notification-icon" aria-hidden="true">
+                <Icon name={notificationIconName(toast.kind)} size={17} strokeWidth={1.7} />
+              </span>
+              <Link href={notificationHref(toast.payload)} onClick={() => setToast(null)}>
+                <span className="notification-toast-title">{toast.title}</span>
+                {toast.body ? <span className="notification-toast-body">{toast.body}</span> : null}
+              </Link>
+              <button
+                type="button"
+                className="icon-btn notification-toast-close"
+                onClick={() => setToast(null)}
+                aria-label="Dismiss notification"
+              >
+                <Icon name="close" size={14} strokeWidth={2} />
+              </button>
             </div>,
             document.body,
           )

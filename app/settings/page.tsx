@@ -97,11 +97,11 @@ export default async function SettingsPage() {
               <div id="notifications" className="anchor-target" style={{ padding: 20 }}>
                 <p className="table-head">Notifications</p>
                 <p className="tiny muted" style={{ marginTop: 10 }}>
-                  Payment and confirmation notices appear in the bell at the top of the app. Select one to
-                  open the payment it refers to. Amounts are never included in the preview.
+                  Payment and confirmation notices live in your inbox, with an unread count in the header
+                  bell and the Alerts tab. Amounts are never included in the preview.
                 </p>
-                <Link href="/activity" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
-                  Open activity
+                <Link href="/notifications" className="btn btn-secondary btn-sm" style={{ marginTop: 14 }}>
+                  Open notifications
                 </Link>
               </div>
             </Card>

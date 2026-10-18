@@ -16,6 +16,7 @@ import type { Hex } from "viem";
 import { api } from "./api";
 import { isUnlocked, unlockEnvelope, unlockWallet, type KeyEnvelope } from "./wallet";
 import { awaitReceipt, broadcastTransfer, describeTransferError } from "./transfer";
+import { readableError } from "./errors";
 
 export interface SettlementIntent {
   paymentId: string;
@@ -66,7 +67,7 @@ export function useSettlement() {
       setState({ phase: "ready", intent });
       return intent;
     } catch (error) {
-      setState({ phase: "failed", message: (error as Error).message });
+      setState({ phase: "failed", message: readableError(error, 'The payment could not be prepared. Try again.') });
       return null;
     }
   }, []);

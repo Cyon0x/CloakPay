@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/auth";
 import { Loading } from "../../src/components/ui";
 import { Icon } from "../../src/components/Icon";
+import { useNotifications } from "../../src/notifications";
 import { color, shadow } from "../../src/theme";
 
 /**
@@ -13,10 +14,15 @@ import { color, shadow } from "../../src/theme";
  * Send is the action people open this app for, so it is the only tab that is
  * visually lifted. The other four stay quiet.
  */
-function TabIcon({ label, focused, icon }: { label: string; focused: boolean; icon: string }) {
+function TabIcon({ label, focused, icon, badge }: { label: string; focused: boolean; icon: string; badge?: number }) {
   return (
     <View style={styles.tabIcon}>
       <Icon name={icon} size={20} color={focused ? color.ink950 : color.slate500} strokeWidth={focused ? 2 : 1.7} />
+      {badge && badge > 0 ? (
+        <View style={styles.tabBadge} accessibilityLabel={`${badge} unread`}>
+          <Text style={styles.tabBadgeText}>{badge > 9 ? "9+" : badge}</Text>
+        </View>
+      ) : null}
       <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : null]}>{label}</Text>
     </View>
   );
@@ -35,6 +41,7 @@ function SendTab() {
 
 export default function TabsLayout() {
   const { ready, user } = useAuth();
+  const { unread } = useNotifications();
   const insets = useSafeAreaInsets();
   if (!ready) return <Loading />;
   if (!user) return <Redirect href="/signin" />;
@@ -62,6 +69,14 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="send" options={{ tabBarIcon: () => <SendTab /> }} />
       <Tabs.Screen
+        name="notifications"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Alerts" focused={focused} icon="bell" badge={unread} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="links"
         options={{ tabBarIcon: ({ focused }) => <TabIcon label="Links" focused={focused} icon="link" /> }}
       />
@@ -85,7 +100,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -6 },
     elevation: 12,
   },
-  tabIcon: { alignItems: "center", justifyContent: "center", gap: 2, width: 64 },
+  tabIcon: { alignItems: "center", justifyContent: "center", gap: 2, width: 56 },
+  tabBadge: {
+    position: "absolute",
+    top: -4,
+    right: 7,
+    minWidth: 15,
+    height: 15,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: color.paper0,
+    backgroundColor: color.ink900,
+  },
+  tabBadgeText: { fontSize: 8.5, fontWeight: "700", color: color.paper0, lineHeight: 10 },
   tabLabel: { fontSize: 10.5, color: color.slate500 },
   tabLabelActive: { color: color.ink950, fontWeight: "600" },
 
