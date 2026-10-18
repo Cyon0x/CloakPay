@@ -377,16 +377,21 @@ try {
   // exercised. An app page is then re-requested: if sign-out had only cleared
   // the cookie and left the session row alive, it would still render.
   const signedOut = await evaluate(`(async () => {
-    const response = await fetch('/api/auth/signout', { method: 'POST' });
+    // Follow the redirect by hand. Sign-out redirects to APP_URL, which can
+    // legitimately be a different loopback alias than the one the check is
+    // browsing (localhost vs 127.0.0.1). A followed cross-origin redirect
+    // would fail CORS and hide the revocation result.
+    const response = await fetch('/api/auth/signout', { method: 'POST', redirect: 'manual' });
+    const signout = response.type === 'opaqueredirect' ? 303 : response.status;
     const guarded = await fetch('/send');
     return {
-      signout: response.status,
+      signout,
       appPage: [guarded.status, new URL(guarded.url).pathname].join(' '),
     };
   })()`);
   record(
     "logging out revokes the session, not only the cookie",
-    signedOut.signout === 200 && signedOut.appPage === "200 /signin",
+    signedOut.signout === 303 && signedOut.appPage === "200 /signin",
     JSON.stringify(signedOut),
   );
 
