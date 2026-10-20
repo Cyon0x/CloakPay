@@ -4194,3 +4194,113 @@ html[data-theme="light"] .app-shell-auth .receive-qr .qr-shell {
   .app-shell-auth .dash-cards { gap: 10px; }
   .app-shell-auth .receive-qr .qr-shell { width: min(100%, 176px); }
 }
+
+/* ── Public landing page: phone scale ────────────────────────────────
+   The landing composition is deliberately airy on tablet and desktop.
+   On a phone that same rhythm asks for too much scrolling, so this
+   breakpoint tightens only the landing page's own structures. The
+   shared shell, app pages, navigation and modal surfaces are untouched,
+   and the 44px button height is kept so touch targets stay comfortable. */
+@media (max-width: 640px) {
+  .app-body > .hero {
+    padding: 42px 0 40px;
+  }
+  .app-body > .hero .hero-inner {
+    gap: 24px;
+  }
+  .app-body > .hero .hero-mark-img {
+    width: clamp(118px, 31vw, 136px);
+  }
+  .app-body > .hero h1 {
+    font-size: clamp(28px, 7.6vw, 31px);
+    line-height: 1.08;
+  }
+  .app-body > .hero p.lede {
+    margin-top: 12px;
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .app-body > .hero .hero-actions {
+    margin-top: 22px;
+    gap: 8px;
+  }
+  .app-body > .hero .hero-actions .btn {
+    padding-inline: 18px;
+    font-size: 14px;
+  }
+  .app-body > .hero .hero-actions-secondary {
+    margin-top: 10px;
+  }
+  .app-body > .hero .hero-actions-secondary .btn {
+    padding-inline: 14px;
+    font-size: 13.5px;
+  }
+  .app-body > .hero .status-line {
+    margin-top: 16px;
+    font-size: 12.25px;
+    line-height: 1.5;
+  }
+
+  .app-body > .section {
+    padding: 44px 0;
+  }
+  .app-body > .section .section-intro h2 {
+    margin-top: 8px;
+    font-size: clamp(19.5px, 5.1vw, 21px);
+    line-height: 1.14;
+  }
+  .app-body > .section .section-intro .lede {
+    margin-top: 8px;
+    font-size: 14.25px;
+    line-height: 1.5;
+  }
+  .app-body > .section .eyebrow {
+    font-size: 10px;
+  }
+  .app-body > .section .grid-2,
+  .app-body > .section .grid-3 {
+    gap: 13px;
+    margin-top: 20px !important;
+  }
+  .app-body > .section .feature,
+  .app-body > .section .step {
+    padding: 19px;
+    border-radius: 12px;
+  }
+  .app-body > .section .feature-icon {
+    width: 33px;
+    height: 33px;
+    margin-bottom: 12px;
+    border-radius: 9px;
+  }
+  .app-body > .section .feature h3,
+  .app-body > .section .step h3 {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+  .app-body > .section .step h3 {
+    margin-top: 5px;
+  }
+  .app-body > .section .feature p,
+  .app-body > .section .step p {
+    margin-top: 5px;
+    font-size: 13.25px;
+    line-height: 1.5;
+  }
+  .app-body > .section .feature-more {
+    padding-top: 11px;
+    font-size: 12.5px;
+  }
+  .app-body > .section .tiny {
+    font-size: 12px;
+  }
+
+  .app-shell > .footnote {
+    padding: 24px 0 36px;
+    font-size: 12px;
+  }
+  .app-shell > .footnote .footer-links {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+}
