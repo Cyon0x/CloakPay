@@ -20,13 +20,18 @@ export function QrCode({ value, size = 208 }: { value: string; size?: number }) 
     // scanning problem rather than a cosmetic one.
     const ratio = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
     const canvas = canvasRef.current;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
     QRCode.toCanvas(canvasRef.current, value, {
       width: Math.round(size * ratio),
       margin: 2,
       errorCorrectionLevel: "M",
       color: { dark: "#111318", light: "#ffffff" },
+    }).then(() => {
+      if (cancelled) return;
+      // The renderer writes pixel dimensions onto the element as inline
+      // styles. Clear them so the stylesheet can keep the QR square and let
+      // each surface choose its own display size.
+      canvas.style.removeProperty("width");
+      canvas.style.removeProperty("height");
     }).catch(() => {
       if (!cancelled) setFailed(true);
     });

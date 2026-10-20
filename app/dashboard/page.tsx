@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthedShell } from "@/components/AuthedShell";
 import { WalletSummary } from "@/components/WalletSummary";
+import { GetPaidCard } from "@/components/GetPaidCard";
 import { ComingSoon } from "@/components/ComingSoon";
 import { Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/Icon";
@@ -9,7 +10,7 @@ import { currentUserOrRedirect } from "@/lib/session";
 import { formatWei } from "@/lib/payments";
 import { activeChain } from "@/config/chain";
 import { EXTERNAL_TRANSFER_PAUSED } from "@/config/features";
-import { listIdentities } from "@/lib/auth/accounts";
+import { env } from "@/lib/env";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -25,7 +26,6 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const user = await currentUserOrRedirect();
   const sql = db();
-  const identities = await listIdentities(user.userId);
 
   const [wallet] = await sql<{ address: string }[]>`
     select address from wallets where user_id = ${user.userId}
@@ -52,84 +52,78 @@ export default async function DashboardPage() {
   `;
 
   const symbol = activeChain.nativeToken.symbol;
-  const displayName = user.displayName ?? user.username ?? "Your account";
-  const initial = displayName.trim().slice(0, 1).toUpperCase();
-  const connected = identities.length
-    ? identities.map((identity) => identity.provider === "x" ? "X" : "Google").join(" · ")
-    : "Not connected";
+  const receiveLink = user.username ? `${env.appUrl}/u/${user.username}` : null;
 
   return (
     <AuthedShell>
-      <div className="dashboard dash-home">
-        <section className="profile-card" aria-labelledby="profile-heading">
-          <div className="profile-main">
-            <span className="avatar avatar-xl" aria-hidden="true">{initial}</span>
-            <div className="profile-copy">
-              <h1 id="profile-heading">{displayName}</h1>
-              <p className="profile-handle">@{user.username ?? "account"}</p>
-            </div>
-          </div>
-          <Link href="/settings" className="btn btn-secondary btn-sm profile-edit">
-            <Icon name="settings" size={15} strokeWidth={1.8} />
-            Edit
-          </Link>
+      <div className="dashboard">
+        <header className="dashboard-greeting">
+          <h1>Hello{user.displayName ? `, ${user.displayName}` : user.username ? `, @${user.username}` : ""}</h1>
+          <p>Your wallet, your control.</p>
           {wallet ? null : (
-            <p className="tiny muted profile-note">
+            <p className="tiny muted dashboard-note">
               No wallet yet — finish setting up your account to send and receive.
             </p>
           )}
+        </header>
+
+        <WalletSummary
+          address={wallet?.address ?? null}
+          username={user.username}
+          symbol={symbol}
+          decimals={activeChain.nativeToken.decimals}
+        />
+
+        <section className="dash-cards" aria-label="Payments and receipts">
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="send" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Pay Someone</h2>
+            </div>
+            <p>
+              Send {symbol} to another CloakPay user by typing their username — their wallet address stays
+              private.
+            </p>
+            <Link href="/send" className="dash-card-action">
+              Send a payment
+              <Icon name="chevronRight" size={15} />
+            </Link>
+          </article>
+
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="list" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Receipts</h2>
+            </div>
+            <p>Download a receipt for any confirmed payment.</p>
+            <Link href="/transactions" className="dash-card-action">
+              All transactions
+              <Icon name="chevronRight" size={15} />
+            </Link>
+          </article>
+
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <span className="dash-icon">
+                <Icon name="link" size={17} strokeWidth={1.8} />
+              </span>
+              <h2>Get Paid</h2>
+            </div>
+            <p>
+              Share @{user.username ?? "your username"} and other CloakPay users can pay you without ever
+              seeing your wallet address.
+            </p>
+            <GetPaidCard username={user.username} link={receiveLink} />
+          </article>
         </section>
-
-        <div className="dash-grid">
-          <WalletSummary
-            address={wallet?.address ?? null}
-            username={user.username}
-            symbol={symbol}
-            decimals={activeChain.nativeToken.decimals}
-          />
-
-          <nav className="account-menu" aria-label="Account shortcuts">
-            <Link href="/settings" className="account-row">
-              <span className="account-icon"><Icon name="link" size={18} strokeWidth={1.7} /></span>
-              <span className="account-copy">
-                <strong>Connected Accounts</strong>
-                <span>{connected}</span>
-              </span>
-              <Icon name="chevronRight" size={17} strokeWidth={1.7} />
-            </Link>
-            <Link href="/receive" className="account-row">
-              <span className="account-icon"><Icon name="wallet" size={18} strokeWidth={1.7} /></span>
-              <span className="account-copy">
-                <strong>Wallet</strong>
-                <span>{wallet ? "Set up and self-custodial" : "Not set up yet"}</span>
-              </span>
-              <Icon name="chevronRight" size={17} strokeWidth={1.7} />
-            </Link>
-            <Link href="/transactions" className="account-row">
-              <span className="account-icon"><Icon name="clock" size={18} strokeWidth={1.7} /></span>
-              <span className="account-copy">
-                <strong>Transactions</strong>
-                <span>View history</span>
-              </span>
-              <Icon name="chevronRight" size={17} strokeWidth={1.7} />
-            </Link>
-            <Link href="/faq" className="account-row">
-              <span className="account-icon"><Icon name="shield" size={18} strokeWidth={1.7} /></span>
-              <span className="account-copy">
-                <strong>Help &amp; Support</strong>
-                <span>Get help or contact us</span>
-              </span>
-              <Icon name="chevronRight" size={17} strokeWidth={1.7} />
-            </Link>
-          </nav>
-        </div>
 
         <section className="dash-recent" aria-labelledby="recent-heading">
           <div className="activity-head">
-            <div>
-              <p className="eyebrow">Your account</p>
-              <h2 id="recent-heading">Recent activity</h2>
-            </div>
+            <h2 id="recent-heading">Recent activity</h2>
             <div className="activity-head-actions">
               <Link href="/activity" className="link">
                 View all
@@ -199,7 +193,7 @@ export default async function DashboardPage() {
         </section>
 
         <section className="paused-stack" aria-label="Not available yet">
-          <div className="stack paused-grid">
+          <div className="stack">
             <ComingSoon title="Swap" icon="swap" body="Exchange between assets inside CloakPay." />
             <ComingSoon title="External Transfer" icon="external" body={EXTERNAL_TRANSFER_PAUSED} />
           </div>

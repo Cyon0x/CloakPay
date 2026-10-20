@@ -47,9 +47,9 @@ export default async function ActivityPage() {
           <Card>
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {rows.map((row) => (
-                <li key={row.id} className="list-row divide-row">
+                <li key={row.id} className="list-row divide-row activity-ledger-row">
                   <div className="grow">
-                    <div className="row" style={{ gap: 8 }}>
+                    <div className="row activity-ledger-meta">
                       <span style={{ fontWeight: 500, fontSize: 14 }}>
                         {row.direction === "sent" ? "To" : "From"} @{row.counterparty}
                       </span>
@@ -61,7 +61,7 @@ export default async function ActivityPage() {
                       {row.note ? ` · ${row.note}` : ""}
                     </p>
                   </div>
-                  <div style={{ textAlign: "right" }}>
+                  <div className="activity-ledger-amount">
                     <p className="mono" style={{ fontSize: 14 }}>
                       {row.direction === "sent" ? "−" : "+"}
                       {row.amount_wei ? formatWei(BigInt(row.amount_wei)) : "—"} HYPE
