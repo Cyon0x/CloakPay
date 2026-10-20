@@ -58,6 +58,13 @@ const PUBLIC_ITEMS = [
   { href: "/faq", label: "FAQ" },
 ];
 
+/** The landing page carries these sections inline rather than on their own routes. */
+const LANDING_ITEMS = [
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#security", label: "Security" },
+  { href: "#faq", label: "FAQ" },
+];
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select, [tabindex]:not([tabindex="-1"])';
 
@@ -69,10 +76,13 @@ function isCurrent(pathname: string, href: string): boolean {
 export function TopBar({
   user,
   withNav = true,
+  landingNav = false,
 }: {
   user: NavUser | SessionUser | null;
   /** The authenticated shell has a sidebar; public pages do not. */
   withNav?: boolean;
+  /** Use the landing page's inline section anchors instead of route links. */
+  landingNav?: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -83,6 +93,7 @@ export function TopBar({
   const panel = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const install = useInstallApp();
+  const publicItems = landingNav ? LANDING_ITEMS : PUBLIC_ITEMS;
 
   useEffect(() => setMounted(true), []);
 
@@ -188,16 +199,22 @@ export function TopBar({
           </nav>
         ) : !user ? (
           <nav className="topbar-nav" aria-label="Primary">
-            {PUBLIC_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="nav-link"
-                aria-current={isCurrent(pathname, item.href) ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {publicItems.map((item) =>
+              landingNav ? (
+                <a key={item.href} href={item.href} className="nav-link">
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="nav-link"
+                  aria-current={isCurrent(pathname, item.href) ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
           </nav>
         ) : null}
 
@@ -221,6 +238,7 @@ export function TopBar({
           ) : (
             <>
               <Link href="/signin" className="btn btn-secondary topbar-signin">
+                {landingNav ? <Icon name="user" size={15} strokeWidth={1.8} /> : null}
                 Sign in
               </Link>
               <Link href="/signin" className="btn btn-primary topbar-getstarted">
@@ -299,12 +317,19 @@ export function TopBar({
               ))}
 
               {!user
-                ? PUBLIC_ITEMS.map((item) => (
-                    <Link key={item.href} href={item.href} className="drawer-item" onClick={close}>
-                      <Icon name="external" size={17} />
-                      <span className="grow">{item.label}</span>
-                    </Link>
-                  ))
+                ? publicItems.map((item) =>
+                    landingNav ? (
+                      <a key={item.href} href={item.href} className="drawer-item" onClick={close}>
+                        <Icon name="external" size={17} />
+                        <span className="grow">{item.label}</span>
+                      </a>
+                    ) : (
+                      <Link key={item.href} href={item.href} className="drawer-item" onClick={close}>
+                        <Icon name="external" size={17} />
+                        <span className="grow">{item.label}</span>
+                      </Link>
+                    ),
+                  )
                 : null}
 
               {!user ? (

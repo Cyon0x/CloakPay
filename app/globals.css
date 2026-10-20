@@ -2185,16 +2185,28 @@ html[data-theme="dark"] {
   .lp-text-action {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    min-height: 44px;
-    padding: 0 7px;
-    color: var(--color-slate-700);
-    font-size: 13.5px;
-    font-weight: 520;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    background: var(--glass-soft);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    color: var(--color-slate-600);
+    font-size: 13px;
+    font-weight: 560;
     text-decoration: none;
-    transition: color 150ms ease, gap 150ms ease;
+    transition: color 150ms ease, gap 150ms ease, background-color 150ms ease, border-color 150ms ease;
   }
-  .lp-text-action:hover { color: var(--color-ink-950); gap: 8px; }
+  .lp-text-action:hover {
+    gap: 8px;
+    color: var(--color-ink-950);
+    border-color: var(--color-line-strong);
+    background: var(--glass-tint);
+  }
+  .lp-text-action:active { transform: translateY(1px); }
   .lp-status {
     display: flex;
     align-items: center;
@@ -3617,6 +3629,8 @@ html[data-theme="dark"] .lp-btn-primary { color: #08090b; }
 .lp-status { margin-top: 32px; border-top-color: var(--glass-border); font-size: 12px; }
 .lp-status .dot-ok { background: #48d995; box-shadow: 0 0 12px rgba(72, 217, 149, 0.7); }
 
+html:has(.landing-shell) { scroll-behavior: smooth; }
+
 .lp-advantage {
   padding: clamp(72px, 8vw, 108px) 0;
   border-bottom-color: var(--glass-border);
@@ -3723,7 +3737,7 @@ html[data-theme="dark"] .lp-btn-primary { color: #08090b; }
   .lp-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
   .lp-actions .btn,
   .lp-text-action { width: 100%; justify-content: center; }
-  .lp-x-signin { display: inline-flex; }
+  .lp-x-signin { display: none; }
   .lp-text-action { min-height: 46px; }
   .lp-advantage { padding: 62px 0 72px; }
   .lp-section-head h2 { font-size: clamp(32px, 10vw, 44px); }
@@ -4193,114 +4207,4 @@ html[data-theme="light"] .app-shell-auth .receive-qr .qr-shell {
   .app-shell-auth .wallet-card { padding: 16px; }
   .app-shell-auth .dash-cards { gap: 10px; }
   .app-shell-auth .receive-qr .qr-shell { width: min(100%, 176px); }
-}
-
-/* ── Public landing page: phone scale ────────────────────────────────
-   The landing composition is deliberately airy on tablet and desktop.
-   On a phone that same rhythm asks for too much scrolling, so this
-   breakpoint tightens only the landing page's own structures. The
-   shared shell, app pages, navigation and modal surfaces are untouched,
-   and the 44px button height is kept so touch targets stay comfortable. */
-@media (max-width: 640px) {
-  .app-body > .hero {
-    padding: 42px 0 40px;
-  }
-  .app-body > .hero .hero-inner {
-    gap: 24px;
-  }
-  .app-body > .hero .hero-mark-img {
-    width: clamp(118px, 31vw, 136px);
-  }
-  .app-body > .hero h1 {
-    font-size: clamp(28px, 7.6vw, 31px);
-    line-height: 1.08;
-  }
-  .app-body > .hero p.lede {
-    margin-top: 12px;
-    font-size: 14.5px;
-    line-height: 1.5;
-  }
-  .app-body > .hero .hero-actions {
-    margin-top: 22px;
-    gap: 8px;
-  }
-  .app-body > .hero .hero-actions .btn {
-    padding-inline: 18px;
-    font-size: 14px;
-  }
-  .app-body > .hero .hero-actions-secondary {
-    margin-top: 10px;
-  }
-  .app-body > .hero .hero-actions-secondary .btn {
-    padding-inline: 14px;
-    font-size: 13.5px;
-  }
-  .app-body > .hero .status-line {
-    margin-top: 16px;
-    font-size: 12.25px;
-    line-height: 1.5;
-  }
-
-  .app-body > .section {
-    padding: 44px 0;
-  }
-  .app-body > .section .section-intro h2 {
-    margin-top: 8px;
-    font-size: clamp(19.5px, 5.1vw, 21px);
-    line-height: 1.14;
-  }
-  .app-body > .section .section-intro .lede {
-    margin-top: 8px;
-    font-size: 14.25px;
-    line-height: 1.5;
-  }
-  .app-body > .section .eyebrow {
-    font-size: 10px;
-  }
-  .app-body > .section .grid-2,
-  .app-body > .section .grid-3 {
-    gap: 13px;
-    margin-top: 20px !important;
-  }
-  .app-body > .section .feature,
-  .app-body > .section .step {
-    padding: 19px;
-    border-radius: 12px;
-  }
-  .app-body > .section .feature-icon {
-    width: 33px;
-    height: 33px;
-    margin-bottom: 12px;
-    border-radius: 9px;
-  }
-  .app-body > .section .feature h3,
-  .app-body > .section .step h3 {
-    font-size: 16px;
-    line-height: 1.2;
-  }
-  .app-body > .section .step h3 {
-    margin-top: 5px;
-  }
-  .app-body > .section .feature p,
-  .app-body > .section .step p {
-    margin-top: 5px;
-    font-size: 13.25px;
-    line-height: 1.5;
-  }
-  .app-body > .section .feature-more {
-    padding-top: 11px;
-    font-size: 12.5px;
-  }
-  .app-body > .section .tiny {
-    font-size: 12px;
-  }
-
-  .app-shell > .footnote {
-    padding: 24px 0 36px;
-    font-size: 12px;
-  }
-  .app-shell > .footnote .footer-links {
-    gap: 12px;
-    margin-bottom: 12px;
-  }
 }
