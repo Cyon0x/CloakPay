@@ -35,13 +35,6 @@ settling it as something else.
 
 ### What the interface says, and what it does not
 
-Page copy is for the person using the product, so it says what a feature does,
-what a user has to do next, and what is not available yet — one line where one
-line will do. How any of it is built stays here and in [docs/](docs/): the
-shielded pool's construction, its contracts and its proofs are in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and `src/config/privacy.ts` keeps
-the pool's "what it hides / what it does not" lists for the page that will
-render them when private payments return. Neither is shown to a user today.
 
 ## How a payment works
 
